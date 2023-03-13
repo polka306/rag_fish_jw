@@ -3,8 +3,10 @@ import time
 import os
 import random
 import win32gui
+import win32api
+import win32con
 
-DEBUG = False
+DEBUG = True
 
 # ldplayerName ="LDPlayer"
 ldplayerName ="포샵"
@@ -62,6 +64,17 @@ def findColorinPixels(pixels, targetRGB, rgbVariance=(3, 3, 3)):
             return True
     return False
 
+def jwClick(x, y):
+    pyautogui.click(x, y)
+    # global ldplayerName
+    # hwnd = win32gui.FindWindow(None, ldplayerName)
+    # if hwnd >=1:    
+    #     left, top, right, bot = win32gui.GetWindowRect(hwnd)
+    #     if(DEBUG) : print(f"click pos = {x-left}, {y-top}")
+    #     lParam = win32api.MAKELONG(x-left, y-top)
+    #     win32api.PostMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
+    #     win32api.PostMessage(hwnd, win32con.WM_LBUTTONUP, None, lParam)
+
 
 if __name__ == '__main__':
     # 좌표 리스트
@@ -80,7 +93,7 @@ if __name__ == '__main__':
             # r, g, b = pyautogui.pixel(x, y)
             pixels = getPixelWnd(x, y, 1)
 
-            if(DEBUG): print(f"{coords.index((x,y))} ({x}, {y}) : {pixels}")
+            # if(DEBUG): print(f"{coords.index((x,y))} ({x}, {y}) : {pixels}")
 
             x=random.randint(x, x+4)
             y=random.randint(y, y+4)
@@ -93,91 +106,94 @@ if __name__ == '__main__':
             if findColorinPixels(pixels, (231,145,101)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay) 
-                pyautogui.click(x, y)
+                jwClick(x, y)
                 print("일퀘 클릭")          
                 
             
             elif findColorinPixels(pixels, (125,155,226)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
-                pyautogui.click(x, y)
+                jwClick(x, y)
                 print("일퀘 완료 건네기 좌표")
                 
 
             elif findColorinPixels(pixels, (119, 88, 118)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
-                pyautogui.click(x, y)
+                jwClick(x, y)
                 print("스킵 화살용 좌표")
                 
 
             elif findColorinPixels(pixels, (150, 226, 103)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
-                pyautogui.click(x, y)
+                jwClick(x, y)
                 print("스킵 아래 녹색 좌표")
                 
 
             elif findColorinPixels(pixels, (255,248,230)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
-                pyautogui.click(x, y)
+                jwClick(x, y)
                 print("황금 테두리 하얀손가락")
                 
 
             elif findColorinPixels(pixels, (206, 231,165)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
-                pyautogui.click(x, y)
+                jwClick(x, y)
                 print("문답 지문 녹색2")            
                 
 
             elif findColorinPixels(pixels, (206,240,156)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
-                pyautogui.click(x, y)
+                jwClick(x, y)
                 print("문답 지문 녹색1(위)+파란2 좌표")
                 
 
             elif findColorinPixels(pixels, (212,237,176)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
-                pyautogui.click(x, y)
+                jwClick(x, y)
                 print("문답 지문 녹색1(위)+파란3 좌표")
                 
 
             elif findColorinPixels(pixels, (125,153,227)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
-                pyautogui.click(x, y)
+                jwClick(x, y)
                 print("재료 건네기 좌표")
                 
 
             elif findColorinPixels(pixels, (205,232,164)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
-                pyautogui.click(x, y)
+                jwClick(x, y)
                 print("문답 지문 녹색 좌표(1지문)")
                 
 
             elif findColorinPixels(pixels, (229,229,237), (1,1,1)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
-                pyautogui.click(x, y)
+                jwClick(x, y)
                 print(f"문답 지문 하얀색 좌표 = {x}, {y}")
                 
 
             elif findColorinPixels(pixels, (231,229,232), (1,1,1)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
-                pyautogui.click(x, y)
+                jwClick(x, y)
                 print("일퀘 우측 나가기 버튼")
                 
         else:
             # 좌표 순회가 완료되었을 때 실행되는 부분
-            pyautogui.click( e ,w , interval= p )
-            time.sleep(1)
-            pyautogui.click( e ,w , interval= p )
+            # pyautogui.click( e ,w , interval= p )
+            # time.sleep(1)
+            # pyautogui.click( e ,w , interval= p )
+            time.sleep(p)
+            jwClick(e, w)
+
         
 
 

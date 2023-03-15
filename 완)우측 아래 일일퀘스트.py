@@ -8,8 +8,8 @@ import win32con
 
 DEBUG = True
 
-# ldplayerName ="LDPlayer"
-ldplayerName ="포샵"
+ldplayerName ="LDPlayer"
+# ldplayerName ="포샵"
 
 oldWndInfo = {
     "left" : 1598, 
@@ -80,9 +80,9 @@ if __name__ == '__main__':
     # 좌표 리스트
     coords = [(1646, 935),(1725, 940),(1786, 949),(1824, 945),(1886, 955),
             (1634, 989),(1694, 1002),(1744, 995),(1804, 1000),(1852, 1005),
-            (1878, 870), (1882, 1028), (1899, 985), (1899, 985), (1869, 1012),
+             (1882, 1028), (1899, 985), (1899, 985), (1869, 1012),
             (1901, 952), (1819, 924), (1777, 997), (1899, 872),(1905, 985),
-            (1905,933), ] 
+            (1905,933), (1878, 870),] 
     coords, randNum = calcCoords(coords)
 
     while True:
@@ -186,13 +186,14 @@ if __name__ == '__main__':
                 jwClick(x, y)
                 print("일퀘 우측 나가기 버튼")
                 
-        else:
-            # 좌표 순회가 완료되었을 때 실행되는 부분
-            # pyautogui.click( e ,w , interval= p )
-            # time.sleep(1)
-            # pyautogui.click( e ,w , interval= p )
-            time.sleep(p)
-            jwClick(e, w)
+        
+        # 좌표 순회가 완료되었을 때 실행되는 부분
+        # pyautogui.click( e ,w , interval= p )
+        # time.sleep(1)
+        # pyautogui.click( e ,w , interval= p )
+        time.sleep(1)
+        jwClick(e, w)
+        time.sleep(p)
 
         
 

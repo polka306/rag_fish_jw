@@ -65,18 +65,21 @@ def findColorinPixels(pixels, targetRGB, rgbVariance=(3, 3, 3)):
     return False
 
 def jwClick(x, y):
-    pyautogui.click(x, y)
-    # global ldplayerName
-    # hwnd = win32gui.FindWindow(None, ldplayerName)
-    # if hwnd >=1:    
-    #     left, top, right, bot = win32gui.GetWindowRect(hwnd)
-    #     if(DEBUG) : print(f"click pos = {x-left}, {y-top}")
-    #     lParam = win32api.MAKELONG(x-left, y-top)
-    #     win32api.PostMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
-    #     win32api.PostMessage(hwnd, win32con.WM_LBUTTONUP, None, lParam)
+    # pyautogui.click(x, y)
+    global ldplayerName
+    y = y - 35
+    hwnd = win32gui.FindWindow(None, ldplayerName)
+    if hwnd >=1:    
+        if(DEBUG) : print(f"click {x}, {y}")
+        pos = (x,y)
+        cli_pos = win32gui.ScreenToClient(hwnd, pos)
+        lParam = win32api.MAKELONG(cli_pos[0], cli_pos[1])
+        hWnd1 = win32gui.FindWindowEx(hwnd, None, None, None)
+        win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
+        win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, lParam)
 
 
-if __name__ == '__main__':
+def main():
     # 좌표 리스트
     coords = [(1646, 935),(1725, 940),(1786, 949),(1824, 945),(1886, 955),
             (1634, 989),(1694, 1002),(1744, 995),(1804, 1000),(1852, 1005),
@@ -196,7 +199,8 @@ if __name__ == '__main__':
         time.sleep(p)
 
         
-
+if __name__ == '__main__':
+    main()
 
 
            

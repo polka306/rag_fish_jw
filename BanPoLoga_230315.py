@@ -11,7 +11,7 @@ import sys
 
 DEBUG = False
 
-VERSION = "230315"
+VERSION = "230316"
 
 ldplayerName ="LDPlayer"
 #ldplayerName ="포샵"
@@ -307,7 +307,7 @@ def quest():
 # fishing_thread = threading.Thread(target=fishing)
 # quest_thread = threading.Thread(target=quest)
 # main_thread = fishing_thread
-
+main_thread = threading.Thread(target=fishing)
 pauseFlag = True
 def fishing_start_button_clicked():
     global pauseFlag, start_button, main_thread
@@ -349,7 +349,7 @@ if __name__ == '__main__':
     root = tk.Tk()
     root.title(f"BanPoLoga {VERSION}")
     root.geometry("300x100+200+200")
-    root.resizable(False, False)
+    # root.resizable(False, False)
 
     lbWndName=tk.Label(root, text="창 이름:", width=10)
     lbWndName.grid(row=0, column=0)

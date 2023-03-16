@@ -300,27 +300,35 @@ def quest():
         time.sleep(1)
         jwClick(e, w) # 좌측 일퀘 진행 부분 클릭
         time.sleep(p)
+        
         if stop_event.is_set():
             break
 
-fishing_thread = threading.Thread(target=fishing)
-quest_thread = threading.Thread(target=quest)
-main_thread = fishing_thread
+# fishing_thread = threading.Thread(target=fishing)
+# quest_thread = threading.Thread(target=quest)
+# main_thread = fishing_thread
 
 pauseFlag = True
 def fishing_start_button_clicked():
     global pauseFlag, start_button, main_thread
     if pauseFlag == True:
+        if main_thread is None:
+            selectMacro_clicked()
         stop_event.clear()
         main_thread.start()
         pauseFlag = False
         start_button['text'] = "■"
     else:
         stop_event.set()
+        # puase_event.set()
+        main_thread.join()
+        main_thread = None
         pauseFlag = True
         start_button['text'] = "▶"
 
 def exit_button_clicked():
+    stop_event.set()
+    main_thread.join()
     root.destroy()
     sys.exit(0)
 
@@ -329,11 +337,13 @@ def setWindowName(event):
     ldplayerName = etWndName.get()
 
 def selectMacro_clicked():
-    global cbSelectMacro, main_thread, fishing_thread, quest_thread
+    global cbSelectMacro, main_thread, ldplayerName
     if cbSelectMacro.get() == '낚시':
-        main_thread = fishing_thread
+        main_thread = threading.Thread(target=fishing)
     elif cbSelectMacro.get() == '일퀘':
-        main_thread = quest_thread
+        main_thread = threading.Thread(target=quest)
+
+    ldplayerName = etWndName.get()
 
 if __name__ == '__main__':
     root = tk.Tk()
@@ -344,22 +354,25 @@ if __name__ == '__main__':
     lbWndName=tk.Label(root, text="창 이름:", width=10)
     lbWndName.grid(row=0, column=0)
 
-    etWndName = tk.Entry(root, width=20)
+    etWndName = tk.Entry(root, width=15)
     etWndName.bind("<Return>", setWindowName)
     etWndName.grid(row=0, column=1)
     etWndName.insert(0, "LDPlayer")
+
+    lbSelMacro=tk.Label(root, text="매크로 선택:", width=10)
+    lbSelMacro.grid(row=1, column=0)
 
     macroList = [
         '낚시',
         '일퀘'
     ]
 
-    cbSelectMacro=tk.ttk.Combobox(root, height=15, values=macroList)
-    cbSelectMacro.grid(row=1, column=0)
+    cbSelectMacro=tk.ttk.Combobox(root, height=15,width=10, values=macroList)
+    cbSelectMacro.grid(row=1, column=1)
     cbSelectMacro.set("낚시")
 
     btnSelectMacro = tk.Button(root, text="설정", command=selectMacro_clicked)
-    btnSelectMacro.grid(row=1, column=1)
+    btnSelectMacro.grid(row=1, column=2)
 
     start_button = tk.Button(root, text="▶", command=fishing_start_button_clicked, width=15)
     start_button.grid(row=2, column=0)

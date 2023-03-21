@@ -10,8 +10,9 @@ import threading
 import sys
 
 DEBUG = False
+DEBUG_PIXEL = True
 
-VERSION = "230316"
+VERSION = "230315"
 
 ldplayerName ="LDPlayer"
 #ldplayerName ="포샵"
@@ -20,6 +21,14 @@ stop_event = threading.Event()
 puase_event = threading.Event()
 
 ######################## Functions ###############################
+
+def rgbint2rgbtuple(RGBint):
+
+    blue = RGBint & 255
+    green = (RGBint >> 8) & 255
+    red = (RGBint >> 16) & 255
+
+    return (red, green, blue)
 
 def calcCoords(oldCoords):
     global ldplayerName
@@ -90,15 +99,44 @@ def calcCoords2(oldCoords):
         randNum.append((round(left + w*x_ratio), round(top + h*y_ratio)))
     return newCoords, randNum
 
+def rgbint2rgbtuple(RGBint):
+
+    blue = RGBint & 255
+    green = (RGBint >> 8) & 255
+    red = (RGBint >> 16) & 255
+
+    return (red, green, blue)
+
 def getPixelWnd(x, y, size=1):
+    global ldplayerName
     pixels = []
+    pyautopixel = []
+    hwnd = win32gui.FindWindow(None, ldplayerName)
+    hWnd1 = win32gui.FindWindowEx(hwnd, None, None, None)
+    
+    #if(DEBUG_PIXEL):print(f"{hdc}")
+
     for i in range(x-size, x+size+1):
         for j in range(y-size, y+size+1):
             try:
-                pixels.append(pyautogui.pixel(i, j))
+                #pixels.append(pyautogui.pixel(i, j))
+                pos = (i,j)
+                cli_pos = win32gui.ScreenToClient(hwnd, pos)
+                hdc = win32gui.GetWindowDC(hWnd1)                
+                color = win32gui.GetPixel(hdc, cli_pos[0]-1, cli_pos[1]-34)
+                win32gui.ReleaseDC(hWnd1, hdc)
+                rgb = rgbint2rgbtuple(color)
+                rgb = rgb[::-1]
+                pixels.append(rgb)
+                if(DEBUG_PIXEL):pyautopixel.append(pyautogui.pixel(i, j))
+                if(DEBUG_PIXEL):print(f"pixels : {pixels} \n")
+                if(DEBUG_PIXEL):print(f"pyautopixels : {pyautopixel} \n")
             except:
                 print("픽셀값을 얻을 수 없습니다.")
+                if(DEBUG_PIXEL): time.sleep(100)
                 return -1
+    
+    print(f"pixels : {pixels} \n")
     return pixels
 
 def findColorinPixels(pixels, targetRGB, rgbVariance=(3, 3, 3)):
@@ -109,17 +147,16 @@ def findColorinPixels(pixels, targetRGB, rgbVariance=(3, 3, 3)):
             return True
     return False
 
-def jwClick(x, y, offset=(0, 0)):
+def jwClick(x, y, offset=35):
     # pyautogui.click(x, y)
-    x = x - offset[0]
-    y = y - offset[1]
+    y = y - offset
     global ldplayerName
     hwnd = win32gui.FindWindow(None, ldplayerName)
     if hwnd >=1:    
         if(DEBUG) : print(f"click {x}, {y}")
         pos = (x,y)
         cli_pos = win32gui.ScreenToClient(hwnd, pos)
-        lParam = win32api.MAKELONG(cli_pos[0]-1, cli_pos[1]-34)
+        lParam = win32api.MAKELONG(cli_pos[0], cli_pos[1])
         hWnd1 = win32gui.FindWindowEx(hwnd, None, None, None)
         win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
         win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, lParam)
@@ -129,21 +166,23 @@ def fishing():
     global puase_event, stop_event
     step = 1
     fail_count = 0 
+    #pyautogui.mouseInfo()
 
     while True:
 
         # if puase_event.is_set():
         #     continue
-
         # 좌표 리스트    
         coords = [(1754,1034)]
         coords = calcCoords(coords)
+
         if coords == -1:
             continue
 
         x,y = coords[0]
         pixels = getPixelWnd(x, y, 1)
         if pixels == -1:
+            time.sleep(10)
             continue
         
         if step==1 :
@@ -166,7 +205,7 @@ def fishing():
             else:
                 fail_count += 1
         elif step == 3:
-            if(findColorinPixels(pixels, (214,231,187 ))):
+            if(findColorinPixels(pixels, (214,231,187))):
                 time.sleep(random.uniform(0, 0.2))
                 random_x = random.randint(0,20)
                 random_y = random.randint(0,5)
@@ -181,6 +220,7 @@ def fishing():
             step = 1
             fail_count = 0
             print("에러발생함")
+            if(DEBUG_PIXEL): time.sleep(100)
 
         if stop_event.is_set():
             break
@@ -301,35 +341,27 @@ def quest():
         time.sleep(1)
         jwClick(e, w) # 좌측 일퀘 진행 부분 클릭
         time.sleep(p)
-        
         if stop_event.is_set():
             break
 
-# fishing_thread = threading.Thread(target=fishing)
-# quest_thread = threading.Thread(target=quest)
-# main_thread = fishing_thread
-main_thread = threading.Thread(target=fishing)
+fishing_thread = threading.Thread(target=fishing)
+quest_thread = threading.Thread(target=quest)
+main_thread = fishing_thread
+
 pauseFlag = True
 def fishing_start_button_clicked():
     global pauseFlag, start_button, main_thread
     if pauseFlag == True:
-        if main_thread is None:
-            selectMacro_clicked()
         stop_event.clear()
         main_thread.start()
         pauseFlag = False
         start_button['text'] = "■"
     else:
         stop_event.set()
-        # puase_event.set()
-        main_thread.join()
-        main_thread = None
         pauseFlag = True
         start_button['text'] = "▶"
 
 def exit_button_clicked():
-    stop_event.set()
-    main_thread.join()
     root.destroy()
     sys.exit(0)
 
@@ -338,42 +370,37 @@ def setWindowName(event):
     ldplayerName = etWndName.get()
 
 def selectMacro_clicked():
-    global cbSelectMacro, main_thread, ldplayerName
+    global cbSelectMacro, main_thread, fishing_thread, quest_thread
     if cbSelectMacro.get() == '낚시':
-        main_thread = threading.Thread(target=fishing)
+        main_thread = fishing_thread
     elif cbSelectMacro.get() == '일퀘':
-        main_thread = threading.Thread(target=quest)
-
-    ldplayerName = etWndName.get()
+        main_thread = quest_thread
 
 if __name__ == '__main__':
     root = tk.Tk()
     root.title(f"BanPoLoga {VERSION}")
     root.geometry("300x100+200+200")
-    # root.resizable(False, False)
+    root.resizable(False, False)
 
     lbWndName=tk.Label(root, text="창 이름:", width=10)
     lbWndName.grid(row=0, column=0)
 
-    etWndName = tk.Entry(root, width=15)
+    etWndName = tk.Entry(root, width=20)
     etWndName.bind("<Return>", setWindowName)
     etWndName.grid(row=0, column=1)
     etWndName.insert(0, "LDPlayer")
-
-    lbSelMacro=tk.Label(root, text="매크로 선택:", width=10)
-    lbSelMacro.grid(row=1, column=0)
 
     macroList = [
         '낚시',
         '일퀘'
     ]
 
-    cbSelectMacro=tk.ttk.Combobox(root, height=15,width=10, values=macroList)
-    cbSelectMacro.grid(row=1, column=1)
+    cbSelectMacro=tk.ttk.Combobox(root, height=15, values=macroList)
+    cbSelectMacro.grid(row=1, column=0)
     cbSelectMacro.set("낚시")
 
     btnSelectMacro = tk.Button(root, text="설정", command=selectMacro_clicked)
-    btnSelectMacro.grid(row=1, column=2)
+    btnSelectMacro.grid(row=1, column=1)
 
     start_button = tk.Button(root, text="▶", command=fishing_start_button_clicked, width=15)
     start_button.grid(row=2, column=0)
@@ -382,5 +409,9 @@ if __name__ == '__main__':
     exit_button.grid(row=3, column=0)
 
     puase_event.set()
+
+    
+    
+    
 
     root.mainloop()

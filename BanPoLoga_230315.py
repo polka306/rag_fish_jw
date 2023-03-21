@@ -3,11 +3,17 @@ import time
 import os
 import random
 import win32gui
+import win32ui
 import win32con
 import win32api
+from PIL import Image
+from PIL import ImageDraw
+from ctypes import windll
 import tkinter as tk
 import threading
 import sys
+from easydict import EasyDict
+import json
 
 DEBUG = False
 
@@ -20,6 +26,44 @@ stop_event = threading.Event()
 puase_event = threading.Event()
 
 ######################## Functions ###############################
+
+class JsonConfigFileManager:
+    """Json설정파일을 관리한다"""
+    def __init__(self, file_path):
+        self.values = EasyDict()
+        if file_path:
+            self.file_path = file_path # 파일경로 저장
+            self.reload()
+
+    def reload(self):
+        """설정을 리셋하고 설정파일을 다시 로딩한다"""
+        self.clear()
+        if self.file_path:
+            with open(self.file_path, 'r') as f:
+                self.values.update(json.load(f))
+
+    def clear(self):
+        """설정을 리셋한다"""
+        self.values.clear()
+                
+    def update(self, in_dict):
+        """기존 설정에 새로운 설정을 업데이트한다(최대 3레벨까지만)"""
+        for (k1, v1) in in_dict.items():
+            if isinstance(v1, dict):
+                for (k2, v2) in v1.items():
+                    if isinstance(v2, dict):
+                        for (k3, v3) in v2.items():
+                            self.values[k1][k2][k3] = v3
+                    else:
+                        self.values[k1][k2] = v2
+            else:
+                self.values[k1] = v1     
+            
+    def export(self, save_file_name):
+        """설정값을 json파일로 저장한다"""
+        if save_file_name:
+            with open(save_file_name, 'w') as f:
+                json.dump(dict(self.values), f)
 
 def calcCoords(oldCoords):
     global ldplayerName
@@ -54,19 +98,12 @@ def calcCoords(oldCoords):
         
     return newCoords
 
-def calcCoords2(oldCoords):
+def calcCoordsFromConfig(config, key, relative=False):
     global ldplayerName
 
-    oldWndInfo = {
-        "left" : 1598, 
-        "top" : 825, 
-        "width" : 322, 
-        "height" : 215
-    }
     hwnd = win32gui.FindWindow(None, ldplayerName)
 
     newCoords = []
-    randNum = []
 
     if hwnd >=1:    
         left, top, right, bot = win32gui.GetWindowRect(hwnd)
@@ -75,20 +112,14 @@ def calcCoords2(oldCoords):
 
         if(DEBUG) : print(f"hwnd = {left}, {top}, {w}, {h}")
 
-        for oldCoord in oldCoords:
-            x_ratio = (oldCoord[0] - oldWndInfo["left"]) / oldWndInfo["width"]
-            y_ratio = (oldCoord[1] - oldWndInfo["top"]) / oldWndInfo["height"]
+        for name, ratio in config.values[key].coords.items():
+            if(relative):
+                newCoords.append((round(w*ratio[0]), round(h*ratio[1])))
+            else:
+                newCoords.append((round(left + w*ratio[0]), round(top + h*ratio[1])))
+            if(DEBUG) : print(f"{name} : {newCoords[-1]}")
 
-            newCoords.append((round(left + w*x_ratio), round(top + h*y_ratio)))
-        
-        x_ratio = (1620 - oldWndInfo["left"]) / oldWndInfo["width"]
-        y_ratio = (960 - oldWndInfo["top"]) / oldWndInfo["height"]
-        randNum.append((round(left + w*x_ratio), round(top + h*y_ratio)))
-
-        x_ratio = (1660 - oldWndInfo["left"]) / oldWndInfo["width"]
-        y_ratio = (963 - oldWndInfo["top"]) / oldWndInfo["height"]
-        randNum.append((round(left + w*x_ratio), round(top + h*y_ratio)))
-    return newCoords, randNum
+    return newCoords
 
 def getPixelWnd(x, y, size=1):
     pixels = []
@@ -124,20 +155,17 @@ def jwClick(x, y, offset=(0, 0)):
         win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
         win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, lParam)
 
+conf = JsonConfigFileManager('./config.json')
 
 def fishing():
-    global puase_event, stop_event
+    global puase_event, stop_event, conf
     step = 1
     fail_count = 0 
 
     while True:
 
-        # if puase_event.is_set():
-        #     continue
-
         # 좌표 리스트    
-        coords = [(1754,1034)]
-        coords = calcCoords(coords)
+        coords = calcCoordsFromConfig(conf,'fishing')
         if coords == -1:
             continue
 
@@ -186,18 +214,15 @@ def fishing():
             break
 
 def quest():
-    global puase_event, stop_event
+    global puase_event, stop_event, conf
     while True:
-        # if puase_event.is_set():
-        #     continue
-
-        # 좌표 리스트
-        coords = [(1646, 935),(1725, 940),(1786, 949),(1824, 945),(1886, 955),
-                (1634, 989),(1694, 1002),(1744, 995),(1804, 1000),(1852, 1005),
-                (1882, 1028), (1899, 985), (1899, 985), (1869, 1012),
-                (1901, 952), (1819, 924), (1777, 997), (1899, 872),(1905, 985),
-                (1905,933), (1878, 870),] 
-        coords, randNum = calcCoords2(coords)
+        coords = calcCoordsFromConfig(conf,'quest')
+        randNum = [
+            (coords[-2][0], coords[-2][1]),
+            (coords[-1][0], coords[-1][1])
+        ]
+        coords.remove(randNum[0])
+        coords.remove(randNum[1])
         
     # 좌표 순회
         for x, y in coords:
@@ -310,7 +335,7 @@ def quest():
 # main_thread = fishing_thread
 main_thread = threading.Thread(target=fishing)
 pauseFlag = True
-def fishing_start_button_clicked():
+def start_button_clicked():
     global pauseFlag, start_button, main_thread
     if pauseFlag == True:
         if main_thread is None:
@@ -346,7 +371,56 @@ def selectMacro_clicked():
 
     ldplayerName = etWndName.get()
 
+def checkPoint_clicked():
+    conf = JsonConfigFileManager('./config.json')
+    if cbSelectMacro.get() == '낚시':
+        coords = calcCoordsFromConfig(conf, "fishing", True)
+    elif cbSelectMacro.get() == '일퀘':
+        coords = calcCoordsFromConfig(conf, "quest", True)
+
+    hwndname = 'LDPlayer'
+    hwnd = win32gui.FindWindow(None, hwndname)
+
+    if hwnd >= 1:
+        left, top, right, bot = win32gui.GetWindowRect(hwnd)
+        w = right - left
+        h = bot - top
+        hwndDC = win32gui.GetWindowDC(hwnd)
+        mfcDC = win32ui.CreateDCFromHandle(hwndDC)
+        saveDC = mfcDC.CreateCompatibleDC()
+
+        saveBitMap = win32ui.CreateBitmap()
+        saveBitMap.CreateCompatibleBitmap(mfcDC, w, h)
+
+        saveDC.SelectObject(saveBitMap)
+
+        result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 0)
+
+        bmpinfo = saveBitMap.GetInfo()
+        bmpstr = saveBitMap.GetBitmapBits(True)
+        im = Image.frombuffer('RGB', (bmpinfo['bmWidth'], bmpinfo['bmHeight']), bmpstr, 'raw', 'BGRX', 0, 1)
+        win32gui.DeleteObject(saveBitMap.GetHandle())
+        saveDC.DeleteDC()
+        mfcDC.DeleteDC()
+        win32gui.ReleaseDC(hwnd, hwndDC)
+
+    if result == 1:
+        draw = ImageDraw.Draw(im)
+        if cbSelectMacro.get() == '일퀘':
+            randNum = [
+                (coords[-2][0], coords[-2][1]),
+                (coords[-1][0], coords[-1][1])
+            ]
+            coords.remove(randNum[0])
+            coords.remove(randNum[1])
+            draw.rectangle((randNum[0][0], randNum[0][1], randNum[1][0], randNum[1][1]), outline=(255,0,0), width=2)
+
+        for idx, pos in enumerate(coords):
+            draw.text(pos, f"{idx}", (255,0,0))
+        im.show()
+
 if __name__ == '__main__':
+
     root = tk.Tk()
     root.title(f"BanPoLoga {VERSION}")
     root.geometry("300x100+200+200")
@@ -375,7 +449,10 @@ if __name__ == '__main__':
     btnSelectMacro = tk.Button(root, text="설정", command=selectMacro_clicked)
     btnSelectMacro.grid(row=1, column=2)
 
-    start_button = tk.Button(root, text="▶", command=fishing_start_button_clicked, width=15)
+    btnCheckPoint = tk.Button(root, text="좌표확인", command=checkPoint_clicked)
+    btnCheckPoint.grid(row=1, column=3)
+
+    start_button = tk.Button(root, text="▶", command=start_button_clicked, width=15)
     start_button.grid(row=2, column=0)
 
     exit_button = tk.Button(root, text="종료", command=exit_button_clicked, width=15)

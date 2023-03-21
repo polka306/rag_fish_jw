@@ -326,7 +326,8 @@ def start_button_clicked():
 
 def exit_button_clicked():
     stop_event.set()
-    main_thread.join()
+    if main_thread is not None and main_thread.is_alive():
+        main_thread.join()
     root.destroy()
     sys.exit(0)
 
@@ -346,7 +347,12 @@ def selectMacro_clicked():
     conf.export('./config.json')
 
 def checkPoint_clicked():
-    conf = JsonConfigFileManager('./config.json')
+    th = threading.Thread(target=checkPoint)
+    th.start()
+
+def checkPoint():
+    global conf
+    conf.reload()
     if cbSelectMacro.get() == '낚시':
         coords = calcCoordsFromConfig(conf, "fishing", True)
     elif cbSelectMacro.get() == '일퀘':
@@ -377,6 +383,9 @@ def checkPoint_clicked():
         saveDC.DeleteDC()
         mfcDC.DeleteDC()
         win32gui.ReleaseDC(hwnd, hwndDC)
+    else:
+        log.error(f"{hwndname} 창을 찾을 수 없습니다.")
+        return
 
     if result == 1:
         draw = ImageDraw.Draw(im)

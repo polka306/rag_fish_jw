@@ -15,12 +15,15 @@ import sys
 from easydict import EasyDict
 import json
 
+import lib.jw_log as jwlog
+
 DEBUG = False
 
 VERSION = "230322"
 
 ldplayerName ="LDPlayer"
 #ldplayerName ="포샵"
+log = jwlog.jw_make_logger(f"BanPoLoga_{VERSION}")
 
 stop_event = threading.Event()
 puase_event = threading.Event()
@@ -77,14 +80,14 @@ def calcCoordsFromConfig(config, key, relative=False):
         w = right -left
         h = bot - top
 
-        if(DEBUG) : print(f"hwnd = {left}, {top}, {w}, {h}")
+        log.debug(f"hwnd = {left}, {top}, {w}, {h}")
 
         for name, ratio in config.values[key].coords.items():
             if(relative):
                 newCoords.append((round(w*ratio[0]), round(h*ratio[1])))
             else:
                 newCoords.append((round(left + w*ratio[0]), round(top + h*ratio[1])))
-            if(DEBUG) : print(f"{name} : {newCoords[-1]}")
+            log.debug(f"{name} : {newCoords[-1]}")
 
     return newCoords
 
@@ -95,7 +98,7 @@ def getPixelWnd(x, y, size=1):
             try:
                 pixels.append(pyautogui.pixel(i, j))
             except:
-                print("픽셀값을 얻을 수 없습니다.")
+                log.error("픽셀값을 얻을 수 없습니다.")
                 return -1
     return pixels
 
@@ -114,7 +117,7 @@ def jwClick(x, y, offset=(0, 0)):
     global ldplayerName
     hwnd = win32gui.FindWindow(None, ldplayerName)
     if hwnd >=1:    
-        if(DEBUG) : print(f"click {x}, {y}")
+        log.debug(f"click {x}, {y}")
         pos = (x,y)
         cli_pos = win32gui.ScreenToClient(hwnd, pos)
         lParam = win32api.MAKELONG(cli_pos[0]-1, cli_pos[1]-34)
@@ -129,7 +132,7 @@ def fishing():
     global puase_event, stop_event, conf
     step = 1
     fail_count = 0 
-
+    log.info(f"낚시 시작")
     while True:
 
         # 좌표 리스트    
@@ -151,14 +154,14 @@ def fishing():
                 step = 2
                 fail_count = 0
                 time.sleep(random.uniform(0.5, 1))
-                print("낚시 시작")
+                log.info("낚시 시작")
             else:
                 fail_count += 1
         elif step==2:
             if(findColorinPixels(pixels, (229,222,243))):
                 step = 3
                 fail_count = 0
-                print("낚시 중")
+                log.info("낚시 중")
             else:
                 fail_count += 1
         elif step == 3:
@@ -169,20 +172,21 @@ def fishing():
                 jwClick(x-random_x, y-random_y)
                 step = 1
                 fail_count = 0
-                print("낚시 성공")
+                log.info("낚시 성공")
             else:
                 fail_count += 1
 
         if fail_count > 50 :
             step = 1
             fail_count = 0
-            print("에러발생함")
+            log.error("에러발생함")
 
         if stop_event.is_set():
             break
 
 def quest():
     global puase_event, stop_event, conf
+    log.info(f"일퀘 시작")
     while True:
         coords = calcCoordsFromConfig(conf,'quest')
         randNum = [
@@ -193,8 +197,10 @@ def quest():
         coords.remove(randNum[1])
         
     # 좌표 순회
-        for x, y in coords:
-        # 좌표의 RGB값 가져오기
+        for idx, pos in enumerate(coords):
+            x = pos[0]
+            y = pos[1]
+            # 좌표의 RGB값 가져오기
             # r, g, b = pyautogui.pixel(x, y)
             pixels = getPixelWnd(x, y, 1)
 
@@ -212,87 +218,88 @@ def quest():
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay) 
                 jwClick(x, y)
-                print("일퀘 클릭")          
+                log.info(f"(Pos idx:{idx}) 일퀘 클릭")          
                 
             
             elif findColorinPixels(pixels, (125,155,226)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                print("일퀘 완료 건네기 좌표")
+                log.info(f"(Pos idx:{idx}) 일퀘 완료 건네기 좌표")
                 
 
             elif findColorinPixels(pixels, (119, 88, 118)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                print("스킵 화살용 좌표")
+                log.info(f"(Pos idx:{idx}) 스킵 화살용 좌표")
                 
 
             elif findColorinPixels(pixels, (150, 226, 103)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                print("스킵 아래 녹색 좌표")
+                log.info(f"(Pos idx:{idx}) 스킵 아래 녹색 좌표")
                 
 
             elif findColorinPixels(pixels, (255,248,230)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                print("황금 테두리 하얀손가락")
+                log.info(f"(Pos idx:{idx}) 황금 테두리 하얀손가락")
                 
 
             elif findColorinPixels(pixels, (206, 231,165)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                print("문답 지문 녹색2")            
+                log.info(f"(Pos idx:{idx}) 문답 지문 녹색2")            
                 
 
             elif findColorinPixels(pixels, (206,240,156)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                print("문답 지문 녹색1(위)+파란2 좌표")
+                log.info(f"(Pos idx:{idx}) 문답 지문 녹색1(위)+파란2 좌표")
                 
 
             elif findColorinPixels(pixels, (212,237,176)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                print("문답 지문 녹색1(위)+파란3 좌표")
+                log.info(f"(Pos idx:{idx}) 문답 지문 녹색1(위)+파란3 좌표")
                 
 
             elif findColorinPixels(pixels, (125,153,227)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                print("재료 건네기 좌표")
+                log.info(f"(Pos idx:{idx}) 재료 건네기 좌표")
                 
 
             elif findColorinPixels(pixels, (205,232,164)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                print("문답 지문 녹색 좌표(1지문)")
+                log.info(f"(Pos idx:{idx}) 문답 지문 녹색 좌표(1지문)")
                 
 
             elif findColorinPixels(pixels, (229,229,237), (1,1,1)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                print(f"문답 지문 하얀색 좌표 = {x}, {y}")
+                log.info(f"(Pos idx:{idx}) 문답 지문 하얀색 좌표 = {x}, {y}")
                 
 
             elif findColorinPixels(pixels, (231,229,232), (1,1,1)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                print("일퀘 우측 나가기 버튼")
+                log.info(f"(Pos idx:{idx}) 일퀘 우측 나가기 버튼")
 
         time.sleep(1)
         jwClick(e, w) # 좌측 일퀘 진행 부분 클릭
+        log.info(f"pos : {e}, {w} 퀘스트 진행 클릭")
         time.sleep(p)
         
         if stop_event.is_set():

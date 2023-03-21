@@ -17,7 +17,7 @@ import json
 
 DEBUG = False
 
-VERSION = "230316"
+VERSION = "230322"
 
 ldplayerName ="LDPlayer"
 #ldplayerName ="포샵"
@@ -64,39 +64,6 @@ class JsonConfigFileManager:
         if save_file_name:
             with open(save_file_name, 'w') as f:
                 json.dump(dict(self.values), f)
-
-def calcCoords(oldCoords):
-    global ldplayerName
-
-    oldWndInfo = {
-        "left" : 1471, 
-        "top" : 865, 
-        "width" : 322, 
-        "height" : 215
-    }
-
-    hwnd = win32gui.FindWindow(None, ldplayerName)
-
-    newCoords = []
-    randNum = []
-
-    if hwnd >=1:    
-        left, top, right, bot = win32gui.GetWindowRect(hwnd)
-        w = right -left
-        h = bot - top
-
-        if(DEBUG) : print(f"hwnd = {left}, {top}, {w}, {h}")
-
-        for oldCoord in oldCoords:
-            x_ratio = (oldCoord[0] - oldWndInfo["left"]) / oldWndInfo["width"]
-            y_ratio = (oldCoord[1] - oldWndInfo["top"]) / oldWndInfo["height"]
-
-            newCoords.append((round(left + w*x_ratio), round(top + h*y_ratio)))
-    else:
-        print("창을 찾을 수 없습니다.")
-        return -1
-        
-    return newCoords
 
 def calcCoordsFromConfig(config, key, relative=False):
     global ldplayerName
@@ -156,6 +123,7 @@ def jwClick(x, y, offset=(0, 0)):
         win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, lParam)
 
 conf = JsonConfigFileManager('./config.json')
+ldplayerName = conf.values.windowName
 
 def fishing():
     global puase_event, stop_event, conf
@@ -330,9 +298,6 @@ def quest():
         if stop_event.is_set():
             break
 
-# fishing_thread = threading.Thread(target=fishing)
-# quest_thread = threading.Thread(target=quest)
-# main_thread = fishing_thread
 main_thread = threading.Thread(target=fishing)
 pauseFlag = True
 def start_button_clicked():
@@ -370,6 +335,8 @@ def selectMacro_clicked():
         main_thread = threading.Thread(target=quest)
 
     ldplayerName = etWndName.get()
+    conf.update({'windowName':ldplayerName})
+    conf.export('./config.json')
 
 def checkPoint_clicked():
     conf = JsonConfigFileManager('./config.json')
@@ -378,7 +345,7 @@ def checkPoint_clicked():
     elif cbSelectMacro.get() == '일퀘':
         coords = calcCoordsFromConfig(conf, "quest", True)
 
-    hwndname = 'LDPlayer'
+    hwndname = ldplayerName
     hwnd = win32gui.FindWindow(None, hwndname)
 
     if hwnd >= 1:
@@ -432,7 +399,7 @@ if __name__ == '__main__':
     etWndName = tk.Entry(root, width=15)
     etWndName.bind("<Return>", setWindowName)
     etWndName.grid(row=0, column=1)
-    etWndName.insert(0, "LDPlayer")
+    etWndName.insert(0, ldplayerName)
 
     lbSelMacro=tk.Label(root, text="매크로 선택:", width=10)
     lbSelMacro.grid(row=1, column=0)

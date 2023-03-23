@@ -68,7 +68,7 @@ class JsonConfigFileManager:
             with open(save_file_name, 'w') as f:
                 json.dump(dict(self.values), f)
 
-def calcCoordsFromConfig(config, key, relative=False):
+def calcCoordsFromConfig(config, key, subkey=None, relative=False):
     global ldplayerName
 
     hwnd = win32gui.FindWindow(None, ldplayerName)
@@ -81,13 +81,20 @@ def calcCoordsFromConfig(config, key, relative=False):
         h = bot - top
 
         log.debug(f"hwnd = {left}, {top}, {w}, {h}")
-
-        for name, ratio in config.values[key].coords.items():
-            if(relative):
-                newCoords.append((round(w*ratio[0]), round(h*ratio[1])))
-            else:
-                newCoords.append((round(left + w*ratio[0]), round(top + h*ratio[1])))
-            log.debug(f"{name} : {newCoords[-1]}")
+        if subkey is None:
+            for name, ratio in config.values[key].coords.items():
+                if(relative):
+                    newCoords.append((round(w*ratio[0]), round(h*ratio[1])))
+                else:
+                    newCoords.append((round(left + w*ratio[0]), round(top + h*ratio[1])))
+                log.debug(f"{name} : {newCoords[-1]}")
+        else :
+            for idx, ratio in enumerate(config.values[key].coords[subkey]):
+                if(relative):
+                    newCoords.append((round(w*ratio[0]), round(h*ratio[1])))
+                else:
+                    newCoords.append((round(left + w*ratio[0]), round(top + h*ratio[1])))
+                log.debug(f"{idx} : {newCoords[-1]}")
 
     return newCoords
 
@@ -185,7 +192,7 @@ def fishing():
             break
 
 def quest():
-    global puase_event, stop_event, conf
+    global stop_event, conf
     log.info(f"일퀘 시작")
     while True:
         coords = calcCoordsFromConfig(conf,'quest')
@@ -305,128 +312,116 @@ def quest():
         if stop_event.is_set():
             break
 
-def quest22():
-    global stop_event
-
-    wait_time = 5
+def merchant_quest():
+    global stop_event, conf
+    log.info(f"상점퀘 시작")
+    wait_time= 5
+    start_coord = calcCoordsFromConfig(conf, "merchant_quest", subkey="start")
+    x_s, y_s = start_coord[0]
     delay = random.uniform(0.8, 1.2)
+    select_merchant = 0
 
-    jwClick(1640, 960)
+    jwClick(x_s,y_s)
     time.sleep(delay)
 
     while True:
+        coords_dict = {'1 제출(녹색)': (1900, 950),  
+               '2제출완료': (1872, 1012), 
+               '2-1 번 아이템': (1809,920),
+               '플뤄스버튼': (1746,982),
+               '획득경로':(1858,1015),
+               '추천경로':(1783,915),
+               '직구':(1881, 982),}
+        
+        coords = calcCoordsFromConfig(conf, "merchant_quest", subkey="coords")
 
-        oldCoords = [(1900, 950), (1872, 1012),  (1809,920), (1746,982),(1858,1015), (1783,915), (1881, 982)]
-        newCoords = calcCoords2(oldCoords)
-        for key, coords in enumerate(newCoords):
-            if pyautogui.pixelMatchesColor(coords[0], coords[1], (219, 244, 178)):
+        x_start_coords, y_start_coords = coords[1]
+
+        coords_select_merchant = calcCoordsFromConfig(conf, "merchant_quest", subkey="coords_select_merchant")
+        coords_select_merchant_list = ['일반상점', '아가미상점']
+
+        coords_after_send = calcCoordsFromConfig(conf, "merchant_quest", subkey="coords_after_send")
+        x_after_send, y_after_send = coords_after_send[0]        
+        coords_after_send_list = ['2-1번 아이템', 'Get 버튼', '삼점으로 이동',]
+
+        coords_buy_1 = calcCoordsFromConfig(conf, "merchant_quest", subkey="coords_buy_1")
+        coords_buy_1_list = ['숫자2', '숫자0', '녹색버튼', '구매버튼', 'x버튼', 'npc에게',]
+
+        coords_buy_2 = calcCoordsFromConfig(conf, "merchant_quest", subkey="coords_buy_2")
+        coords_buy_2_list = [('숫자1'), ('숫자5'),('녹색버튼'), ('구매버튼'), 
+                             ('x버튼'), ('x버튼'), ('npc에게'),]
+        
+        for x, y in coords : #퀘스트를 수령한다.
+            if findColorinPixels(getPixelWnd(x,y,1), (219, 244, 178)):
                 time.sleep(delay)
-                jwClick(coords)
-                print(f"1 제출(녹색) {key}")
+                jwClick(x,y)
+                print(f"1 제출(녹색)")
 
-            elif pyautogui.pixelMatchesColor(coords[0], coords[1], (128,153,227)):
+            elif findColorinPixels(getPixelWnd(x,y,1), (128,153,227)): #퀘스트를 제출한다.
                 time.sleep(1)
-                jwClick(coords)
-                print(f"2 제출완료 {key}")
+                jwClick(x,y)
+                print(f"2 제출완료")
                 time.sleep(wait_time)
 
+                # 2 제출완료 이후에 실행되어야 하는 코드
+                if findColorinPixels(getPixelWnd(x_after_send,y_after_send,1), (219,225,231)): #아이템을 눌러라
+                    after_send_count=0
+                    for x_1,y_1 in coords_after_send :
+                        time.sleep(delay)
+                        jwClick(x_1,y_1)
+                        print(f'현재 실행 : {coords_after_send_list[after_send_count]}')
+                        after_send_count+=1
+                elif not findColorinPixels(getPixelWnd(x_start_coords, y_start_coords,1), (128, 153, 227)): #퀘스트 제출이 완료되면 처음으로.
+                    print(f"{wait_time}초간 반응이 없어 {start_coord}를 클릭합니다.")
+                    jwClick(x_s,y_s)
 
-            # 2 제출완료 이후에 실행되어야 하는 코드
-                if pyautogui.pixelMatchesColor(coords[0], coords[1], (219,225,231)): #아이템을 눌러라
-                    time.sleep(delay)
-                    jwClick(1809,920)
-                    print(f"2-1번 아이템")
+            elif findColorinPixels(getPixelWnd(x,y,1), (217,144,118)): 
+                jwClick(x,y)
+                print(f"획득경로 1-1")
+                time.sleep(wait_time)
                 
-                    time.sleep(1)
-                    jwClick(1790,903)
-                    print('Get 버튼')  
-
+                select_x,select_y = coords_select_merchant[0]                
+                if findColorinPixels(getPixelWnd(select_x,select_y,1), (255,239,174)):
                     time.sleep(delay)
-                    jwClick(1837,917)                
-                    print('삼점으로 이동') 
-              
-                elif not pyautogui.pixelMatchesColor(1872, 1012, (128, 153, 227)): #퀘스트 제출이 완료되면 처음으로.
-                    print(f"{wait_time}초간 반응이 없어 {1640, 960}를 클릭합니다.")
-                    jwClick(1640, 960)
-
-            elif pyautogui.pixelMatchesColor(coords[0], coords[1], (217,144,118)): 
+                    jwClick(select_x,select_y)
+                    print(f"경로는  {coords_select_merchant_list[0]}")
+                    select_merchant = 1
+                select_x,select_y = coords_select_merchant[1]
+                if not findColorinPixels(getPixelWnd(select_x,select_y,1), (255,239,174)): 
+                    print(f"경로는  {coords_select_merchant_list[1]}")
+                    jwClick(select_x,select_y)
+                    select_merchant = 2
+            #elif findColorinPixels(getPixelWnd(x,y, (255,239,174)): 
+            #    time.sleep(delay)
+            #    jwClick(x,y)
+            #    print(f"추천경로Clicked") 
+            
+            # 로가 기준 
+            #elif findColorinPixels(getPixelWnd(x,y, (156,153,154)):
+            # 반디 기준 
+            elif (findColorinPixels(getPixelWnd(x,y,1), (121,110,113)) & (select_merchant==1)):
                 time.sleep(delay)
-                jwClick(coords)
-                print(f"획득경로 1-1 {key}")
+                jwClick(x,y)                
+                print(f"일반상점")
+                buy_1_count=0
+                for x_2,y_2 in coords_buy_1 :
+                    time.sleep(delay)
+                    jwClick(x_2, y_2)
+                    print(f'현재 실행 : {coords_buy_1_list[buy_1_count]}')
+                    buy_1_count += 1
 
-            elif pyautogui.pixelMatchesColor(coords[0], coords[1], (255,239,174)): 
+            elif (findColorinPixels(getPixelWnd(x,y,1), (121,110,113)) & (select_merchant==2)):
                 time.sleep(delay)
-                jwClick(coords)
-                print(f"추천경로Clicked {key}") 
-
-            elif pyautogui.pixelMatchesColor(coords[0], coords[1], (156,153,154)):
-                time.sleep(delay)
-                jwClick(coords)
-                print(f"플뤄스버튼 {key}") 
-
-                time.sleep(delay)
-                jwClick(1812,945)
-                print('숫자2')
-
-                time.sleep(delay)
-                jwClick(1842,964)                
-                print('숫자0')
-
-                time.sleep(delay)
-                jwClick(1845,981)
-                print('녹색버튼')
-
-                time.sleep(delay)
-                jwClick(1750,1012)
-                print('구매버튼')
-
-                time.sleep(delay)
-                jwClick(1899, 872)
-                print('x 버튼')
-
-                time.sleep(delay)
-                jwClick(1640, 960)
-                print('NPC 에게') 
-
-            elif pyautogui.pixelMatchesColor(coords[0], coords[1], (217,144,118)): 
-                time.sleep(delay)
-                jwClick(coords)
-                print(f"획득경로 1-2 {key}") 
-
-                time.sleep(delay)
-                jwClick(1777,922)
-                print('상점행')
-
-                time.sleep(delay)
-                jwClick(1744,929)
-                print('숫자2')
-
-                time.sleep(delay)
-                jwClick(1786,949)                
-                print('숫자0')
-
-                time.sleep(delay)
-                jwClick(1782,964)
-                print('녹색버튼')
-
-                time.sleep(delay)
-                jwClick(1864,1012)
-                print('구매버튼')
-
-                time.sleep(delay)
-                jwClick(1891, 868)
-                print('x 버튼')
-
-                time.sleep(delay)
-                jwClick(1906, 874)
-                print('x 버튼')
-
-                time.sleep(delay)
-                jwClick(1640, 960)
-                print('NPC 에게')
-
+                jwClick(x,y)
+                print(f"아가미가시") 
+                buy_2_count=0
+                for x_3,y_3 in coords_buy_2 :
+                    time.sleep(delay)
+                    jwClick(x_3, y_3)
+                    print(f'현재 실행 : {coords_buy_2_list[buy_2_count]}')
+                    buy_2_count += 1
         if stop_event.is_set():
-            break 
+            break
 
 main_thread = threading.Thread(target=fishing)
 pauseFlag = True
@@ -464,6 +459,8 @@ def selectMacro_clicked():
         main_thread = threading.Thread(target=fishing)
     elif cbSelectMacro.get() == '일퀘':
         main_thread = threading.Thread(target=quest)
+    elif cbSelectMacro.get() == '상점퀘':
+        main_thread = threading.Thread(target=merchant_quest)
 
     ldplayerName = etWndName.get()
     conf.update({'windowName':ldplayerName})
@@ -477,9 +474,13 @@ def checkPoint():
     global conf
     conf.reload()
     if cbSelectMacro.get() == '낚시':
-        coords = calcCoordsFromConfig(conf, "fishing", True)
+        coords = calcCoordsFromConfig(conf, "fishing", relative=True)
     elif cbSelectMacro.get() == '일퀘':
-        coords = calcCoordsFromConfig(conf, "quest", True)
+        coords = calcCoordsFromConfig(conf, "quest", relative=True)
+    elif cbSelectMacro.get() == '상점퀘':
+        coords = []
+        for subkey in conf.values.merchant_quest.coords.keys():
+            coords.extend(calcCoordsFromConfig(conf, "merchant_quest", subkey=subkey, relative=True))
 
     hwndname = ldplayerName
     hwnd = win32gui.FindWindow(None, hwndname)
@@ -545,7 +546,8 @@ if __name__ == '__main__':
 
     macroList = [
         '낚시',
-        '일퀘'
+        '일퀘',
+        '상점퀘'
     ]
 
     cbSelectMacro=tk.ttk.Combobox(root, height=15,width=10, values=macroList)

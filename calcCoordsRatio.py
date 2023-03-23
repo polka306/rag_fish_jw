@@ -77,8 +77,9 @@ if __name__ == "__main__":
     # coords = calcCoordsRatio(conf.values.fishing.oldCoords, conf.values.fishing.oldWndSize)
     # conf.update({'fishing':{'coords':coords}})
 
-    coords = calcCoordsRatio(conf.values.store_quest.oldCoords, conf.values.store_quest.oldWndSize)
-    conf.update({'store_quest':{'coords':coords}})
+    for key, val in conf.values.merchant_quest.oldCoords.items():
+        coords = calcCoordsRatio(val, conf.values.merchant_quest.oldWndSize)
+        conf.update({'merchant_quest':{'coords':{key:coords}}})
 
     print(conf.values)
 

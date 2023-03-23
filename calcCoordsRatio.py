@@ -56,45 +56,29 @@ class JsonConfigFileManager:
 
 def calcCoordsRatio(oldCoords, oldWndInfo):
 
-    hwnd = win32gui.FindWindow(None, 'LDPlayer')
-
     newCoords = []
 
-    if hwnd >=1:    
-        left, top, right, bot = win32gui.GetWindowRect(hwnd)
-        w = right -left
-        h = bot - top
+    for oldCoord in oldCoords:
+        x_ratio = (oldCoord[0] - oldWndInfo["left"]) / oldWndInfo["width"]
+        y_ratio = (oldCoord[1] - oldWndInfo["top"]) / oldWndInfo["height"]
 
-        if(DEBUG) : print(f"hwnd = {left}, {top}, {w}, {h}")
-
-        for oldCoord in oldCoords:
-            x_ratio = (oldCoord[0] - oldWndInfo["left"]) / oldWndInfo["width"]
-            y_ratio = (oldCoord[1] - oldWndInfo["top"]) / oldWndInfo["height"]
-
-            newCoords.append((x_ratio, y_ratio))
+        newCoords.append((x_ratio, y_ratio))
         
     return newCoords
-
-def click(x, y):
-    print(f"click ({x}, {y})")
-    hWnd = win32gui.FindWindow(None, ldplayerName)
-    lParam = win32api.MAKELONG(x, y)
-
-    hWnd1 = win32gui.FindWindowEx(hWnd, None, None, None)
-    win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
-    win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONUP, None, lParam)
-
 
                 
 if __name__ == "__main__":
 
     conf = JsonConfigFileManager('./config.json')
 
-    coords = calcCoordsRatio(conf.values.quest.oldCoords, conf.values.quest.oldWndSize)
-    conf.update({'quest':{'coords':coords}})
+    # coords = calcCoordsRatio(conf.values.quest.oldCoords, conf.values.quest.oldWndSize)
+    # conf.update({'quest':{'coords':coords}})
 
-    coords = calcCoordsRatio(conf.values.fishing.oldCoords, conf.values.fishing.oldWndSize)
-    conf.update({'fishing':{'coords':coords}})
+    # coords = calcCoordsRatio(conf.values.fishing.oldCoords, conf.values.fishing.oldWndSize)
+    # conf.update({'fishing':{'coords':coords}})
+
+    coords = calcCoordsRatio(conf.values.store_quest.oldCoords, conf.values.store_quest.oldWndSize)
+    conf.update({'store_quest':{'coords':coords}})
 
     print(conf.values)
 

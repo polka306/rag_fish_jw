@@ -3,93 +3,92 @@ import time
 import os
 import random
 import win32gui
-import win32ui
 import win32con
 import win32api
-from PIL import Image
-from PIL import ImageDraw
-from ctypes import windll
 import tkinter as tk
 import threading
 import sys
-from easydict import EasyDict
-import json
-
-import lib.jw_log as jwlog
 
 DEBUG = False
 
-VERSION = "230322"
+VERSION = "230315"
 
 ldplayerName ="LDPlayer"
 #ldplayerName ="포샵"
-log = jwlog.jw_make_logger(f"BanPoLoga_{VERSION}")
 
 stop_event = threading.Event()
 puase_event = threading.Event()
 
 ######################## Functions ###############################
 
-class JsonConfigFileManager:
-    """Json설정파일을 관리한다"""
-    def __init__(self, file_path):
-        self.values = EasyDict()
-        if file_path:
-            self.file_path = file_path # 파일경로 저장
-            self.reload()
-
-    def reload(self):
-        """설정을 리셋하고 설정파일을 다시 로딩한다"""
-        self.clear()
-        if self.file_path:
-            with open(self.file_path, 'r') as f:
-                self.values.update(json.load(f))
-
-    def clear(self):
-        """설정을 리셋한다"""
-        self.values.clear()
-                
-    def update(self, in_dict):
-        """기존 설정에 새로운 설정을 업데이트한다(최대 3레벨까지만)"""
-        for (k1, v1) in in_dict.items():
-            if isinstance(v1, dict):
-                for (k2, v2) in v1.items():
-                    if isinstance(v2, dict):
-                        for (k3, v3) in v2.items():
-                            self.values[k1][k2][k3] = v3
-                    else:
-                        self.values[k1][k2] = v2
-            else:
-                self.values[k1] = v1     
-            
-    def export(self, save_file_name):
-        """설정값을 json파일로 저장한다"""
-        if save_file_name:
-            with open(save_file_name, 'w') as f:
-                json.dump(dict(self.values), f)
-
-def calcCoordsFromConfig(config, key, relative=False):
+def calcCoords(oldCoords):
     global ldplayerName
+
+    oldWndInfo = {
+        "left" : 1471, 
+        "top" : 865, 
+        "width" : 322, 
+        "height" : 215
+    }
 
     hwnd = win32gui.FindWindow(None, ldplayerName)
 
     newCoords = []
+    randNum = []
 
     if hwnd >=1:    
         left, top, right, bot = win32gui.GetWindowRect(hwnd)
         w = right -left
         h = bot - top
 
-        log.debug(f"hwnd = {left}, {top}, {w}, {h}")
+        if(DEBUG) : print(f"hwnd = {left}, {top}, {w}, {h}")
 
-        for name, ratio in config.values[key].coords.items():
-            if(relative):
-                newCoords.append((round(w*ratio[0]), round(h*ratio[1])))
-            else:
-                newCoords.append((round(left + w*ratio[0]), round(top + h*ratio[1])))
-            log.debug(f"{name} : {newCoords[-1]}")
+        for oldCoord in oldCoords:
+            x_ratio = (oldCoord[0] - oldWndInfo["left"]) / oldWndInfo["width"]
+            y_ratio = (oldCoord[1] - oldWndInfo["top"]) / oldWndInfo["height"]
 
+            newCoords.append((round(left + w*x_ratio), round(top + h*y_ratio)))
+    else:
+        print("창을 찾을 수 없습니다.")
+        return -1
+        
     return newCoords
+
+def calcCoords2(oldCoords):
+    global ldplayerName
+
+    oldWndInfo = {
+        "left" : 1598, 
+        "top" : 825, 
+        "width" : 322, 
+        "height" : 215
+    }
+    hwnd = win32gui.FindWindow(None, ldplayerName)
+
+    newCoords = []
+    randNum = []
+
+    if hwnd >=1:    
+        left, top, right, bot = win32gui.GetWindowRect(hwnd)
+        w = right -left
+        h = bot - top
+
+        if(DEBUG) : print(f"hwnd = {left}, {top}, {w}, {h}")
+
+        for oldCoord in oldCoords:
+            x_ratio = (oldCoord[0] - oldWndInfo["left"]) / oldWndInfo["width"]
+            y_ratio = (oldCoord[1] - oldWndInfo["top"]) / oldWndInfo["height"]
+
+            newCoords.append((round(left + w*x_ratio), round(top + h*y_ratio)))
+        
+        x_ratio = (1620 - oldWndInfo["left"]) / oldWndInfo["width"]
+        y_ratio = (960 - oldWndInfo["top"]) / oldWndInfo["height"]
+        randNum.append((round(left + w*x_ratio), round(top + h*y_ratio)))
+
+        x_ratio = (1660 - oldWndInfo["left"]) / oldWndInfo["width"]
+        y_ratio = (963 - oldWndInfo["top"]) / oldWndInfo["height"]
+        randNum.append((round(left + w*x_ratio), round(top + h*y_ratio)))
+    return newCoords, randNum
 
 def getPixelWnd(x, y, size=1):
     pixels = []
@@ -98,7 +97,7 @@ def getPixelWnd(x, y, size=1):
             try:
                 pixels.append(pyautogui.pixel(i, j))
             except:
-                log.error("픽셀값을 얻을 수 없습니다.")
+                print("픽셀값을 얻을 수 없습니다.")
                 return -1
     return pixels
 
@@ -110,33 +109,34 @@ def findColorinPixels(pixels, targetRGB, rgbVariance=(3, 3, 3)):
             return True
     return False
 
-def jwClick(x, y, offset=(0, 0)):
+def jwClick(x, y, offset=35):
     # pyautogui.click(x, y)
-    x = x - offset[0]
-    y = y - offset[1]
+    y = y - offset
     global ldplayerName
     hwnd = win32gui.FindWindow(None, ldplayerName)
     if hwnd >=1:    
-        log.debug(f"click {x}, {y}")
+        if(DEBUG) : print(f"click {x}, {y}")
         pos = (x,y)
         cli_pos = win32gui.ScreenToClient(hwnd, pos)
-        lParam = win32api.MAKELONG(cli_pos[0]-1, cli_pos[1]-34)
+        lParam = win32api.MAKELONG(cli_pos[0], cli_pos[1])
         hWnd1 = win32gui.FindWindowEx(hwnd, None, None, None)
         win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
         win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, lParam)
 
-conf = JsonConfigFileManager('./config.json')
-ldplayerName = conf.values.windowName
 
 def fishing():
-    global puase_event, stop_event, conf
+    global puase_event, stop_event
     step = 1
     fail_count = 0 
-    log.info(f"낚시 시작")
+
     while True:
 
+        # if puase_event.is_set():
+        #     continue
+
         # 좌표 리스트    
-        coords = calcCoordsFromConfig(conf,'fishing')
+        coords = [(1754,1034)]
+        coords = calcCoords(coords)
         if coords == -1:
             continue
 
@@ -154,14 +154,14 @@ def fishing():
                 step = 2
                 fail_count = 0
                 time.sleep(random.uniform(0.5, 1))
-                log.info("낚시 시작")
+                print("낚시 시작")
             else:
                 fail_count += 1
         elif step==2:
             if(findColorinPixels(pixels, (229,222,243))):
                 step = 3
                 fail_count = 0
-                log.info("낚시 중")
+                print("낚시 중")
             else:
                 fail_count += 1
         elif step == 3:
@@ -172,35 +172,35 @@ def fishing():
                 jwClick(x-random_x, y-random_y)
                 step = 1
                 fail_count = 0
-                log.info("낚시 성공")
+                print("낚시 성공")
             else:
                 fail_count += 1
 
         if fail_count > 50 :
             step = 1
             fail_count = 0
-            log.error("에러발생함")
+            print("에러발생함")
 
         if stop_event.is_set():
             break
 
 def quest():
-    global puase_event, stop_event, conf
-    log.info(f"일퀘 시작")
+    global puase_event, stop_event
     while True:
-        coords = calcCoordsFromConfig(conf,'quest')
-        randNum = [
-            (coords[-2][0], coords[-2][1]),
-            (coords[-1][0], coords[-1][1])
-        ]
-        coords.remove(randNum[0])
-        coords.remove(randNum[1])
+        # if puase_event.is_set():
+        #     continue
+
+        # 좌표 리스트
+        coords = [(1646, 935),(1725, 940),(1786, 949),(1824, 945),(1886, 955),
+                (1634, 989),(1694, 1002),(1744, 995),(1804, 1000),(1852, 1005),
+                (1882, 1028), (1899, 985), (1899, 985), (1869, 1012),
+                (1901, 952), (1819, 924), (1777, 997), (1899, 872),(1905, 985),
+                (1905,933), (1878, 870),] 
+        coords, randNum = calcCoords2(coords)
         
     # 좌표 순회
-        for idx, pos in enumerate(coords):
-            x = pos[0]
-            y = pos[1]
-            # 좌표의 RGB값 가져오기
+        for x, y in coords:
+        # 좌표의 RGB값 가져오기
             # r, g, b = pyautogui.pixel(x, y)
             pixels = getPixelWnd(x, y, 1)
 
@@ -218,95 +218,94 @@ def quest():
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay) 
                 jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 일퀘 클릭")          
+                print("일퀘 클릭")          
                 
             
             elif findColorinPixels(pixels, (125,155,226)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 일퀘 완료 건네기 좌표")
+                print("일퀘 완료 건네기 좌표")
                 
 
             elif findColorinPixels(pixels, (119, 88, 118)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 스킵 화살용 좌표")
+                print("스킵 화살용 좌표")
                 
 
             elif findColorinPixels(pixels, (150, 226, 103)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 스킵 아래 녹색 좌표")
+                print("스킵 아래 녹색 좌표")
                 
 
             elif findColorinPixels(pixels, (255,248,230)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 황금 테두리 하얀손가락")
+                print("황금 테두리 하얀손가락")
                 
 
             elif findColorinPixels(pixels, (206, 231,165)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 문답 지문 녹색2")            
+                print("문답 지문 녹색2")            
                 
 
             elif findColorinPixels(pixels, (206,240,156)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 문답 지문 녹색1(위)+파란2 좌표")
+                print("문답 지문 녹색1(위)+파란2 좌표")
                 
 
             elif findColorinPixels(pixels, (212,237,176)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 문답 지문 녹색1(위)+파란3 좌표")
+                print("문답 지문 녹색1(위)+파란3 좌표")
                 
 
             elif findColorinPixels(pixels, (125,153,227)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 재료 건네기 좌표")
+                print("재료 건네기 좌표")
                 
 
             elif findColorinPixels(pixels, (205,232,164)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 문답 지문 녹색 좌표(1지문)")
+                print("문답 지문 녹색 좌표(1지문)")
                 
 
             elif findColorinPixels(pixels, (229,229,237), (1,1,1)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 문답 지문 하얀색 좌표 = {x}, {y}")
+                print(f"문답 지문 하얀색 좌표 = {x}, {y}")
                 
 
             elif findColorinPixels(pixels, (231,229,232), (1,1,1)):
                 delay = random.uniform(0.5, 1) 
                 time.sleep(delay)
                 jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 일퀘 우측 나가기 버튼")
+                print("일퀘 우측 나가기 버튼")
 
         time.sleep(1)
         jwClick(e, w) # 좌측 일퀘 진행 부분 클릭
-        log.info(f"pos : {e}, {w} 퀘스트 진행 클릭")
         time.sleep(p)
         
         if stop_event.is_set():
             break
 
 def quest22():
-    global stop_event
+    global pause_event, stop_event
 
     wait_time = 5
     delay = random.uniform(0.8, 1.2)
@@ -319,20 +318,20 @@ def quest22():
         oldCoords = [(1900, 950), (1872, 1012),  (1809,920), (1746,982),(1858,1015), (1783,915), (1881, 982)]
         newCoords = calcCoords2(oldCoords)
         for key, coords in enumerate(newCoords):
-            if pyautogui.pixelMatchesColor(coords[0], coords[1], (219, 244, 178)):
+            if pyautogui.pixelMatchesColor(oldCoords[0], oldCoords[1], (219, 244, 178)):
                 time.sleep(delay)
-                jwClick(coords)
+                jwClick(oldCoords)
                 print(f"1 제출(녹색) {key}")
 
-            elif pyautogui.pixelMatchesColor(coords[0], coords[1], (128,153,227)):
+            elif pyautogui.pixelMatchesColor(oldCoords[0], oldCoords[1], (128,153,227)):
                 time.sleep(1)
-                jwClick(coords)
+                jwClick(oldCoords)
                 print(f"2 제출완료 {key}")
                 time.sleep(wait_time)
 
 
             # 2 제출완료 이후에 실행되어야 하는 코드
-                if pyautogui.pixelMatchesColor(coords[0], coords[1], (219,225,231)): #아이템을 눌러라
+                if pyautogui.pixelMatchesColor(oldCoords[0], oldCoords[1], (219,225,231)): #아이템을 눌러라
                     time.sleep(delay)
                     jwClick(1809,920)
                     print(f"2-1번 아이템")
@@ -349,19 +348,19 @@ def quest22():
                     print(f"{wait_time}초간 반응이 없어 {1640, 960}를 클릭합니다.")
                     jwClick(1640, 960)
 
-            elif pyautogui.pixelMatchesColor(coords[0], coords[1], (217,144,118)): 
+            elif pyautogui.pixelMatchesColor(oldCoords[0], oldCoords[1], (217,144,118)): 
                 time.sleep(delay)
-                jwClick(coords)
+                jwClick(oldCoords)
                 print(f"획득경로 1-1 {key}")
 
-            elif pyautogui.pixelMatchesColor(coords[0], coords[1], (255,239,174)): 
+            elif pyautogui.pixelMatchesColor(oldCoords[0], oldCoords[1], (255,239,174)): 
                 time.sleep(delay)
-                jwClick(coords)
+                jwClick(oldCoords)
                 print(f"추천경로Clicked {key}") 
 
-            elif pyautogui.pixelMatchesColor(coords[0], coords[1], (156,153,154)):
+            elif pyautogui.pixelMatchesColor(oldCoords[0], oldCoords[1], (156,153,154)):
                 time.sleep(delay)
-                jwClick(coords)
+                jwClick(oldCoords)
                 print(f"플뤄스버튼 {key}") 
 
                 time.sleep(delay)
@@ -388,9 +387,9 @@ def quest22():
                 jwClick(1640, 960)
                 print('NPC 에게') 
 
-            elif pyautogui.pixelMatchesColor(coords[0], coords[1], (217,144,118)): 
+            elif pyautogui.pixelMatchesColor(oldCoords[0], oldCoords[1], (217,144,118)): 
                 time.sleep(delay)
-                jwClick(coords)
+                jwClick(oldCoords)
                 print(f"획득경로 1-2 {key}") 
 
                 time.sleep(delay)
@@ -426,31 +425,39 @@ def quest22():
                 print('NPC 에게')
 
         if stop_event.is_set():
-            break 
+            break  
+           
+   
 
-main_thread = threading.Thread(target=fishing)
+# fishing_thread = threading.Thread(target=fishing)
+# quest_thread = threading.Thread(target=quest)
+# main_thread = fishing_thread
+
 pauseFlag = True
-def start_button_clicked():
+main_thread = None  # main_thread 변수를 초기화합니다.
+
+def fishing_start_button_clicked():
     global pauseFlag, start_button, main_thread
     if pauseFlag == True:
         if main_thread is None:
             selectMacro_clicked()
         stop_event.clear()
-        main_thread.start()
-        pauseFlag = False
+        if main_thread is not None:  # main_thread 변수가 None 값이 아닌 경우에만 start() 메소드를 호출합니다.
+            main_thread.start()
         start_button['text'] = "■"
+
     else:
         stop_event.set()
-        # puase_event.set()
-        main_thread.join()
+        if main_thread is not None:
+            main_thread.join()
         main_thread = None
         pauseFlag = True
         start_button['text'] = "▶"
 
+
 def exit_button_clicked():
     stop_event.set()
-    if main_thread is not None and main_thread.is_alive():
-        main_thread.join()
+    main_thread.join()
     root.destroy()
     sys.exit(0)
 
@@ -464,73 +471,16 @@ def selectMacro_clicked():
         main_thread = threading.Thread(target=fishing)
     elif cbSelectMacro.get() == '일퀘':
         main_thread = threading.Thread(target=quest)
+    elif cbSelectMacro.get() == '상퀘':
+        main_thread = threading.Thread(target=quest22)
 
     ldplayerName = etWndName.get()
-    conf.update({'windowName':ldplayerName})
-    conf.export('./config.json')
-
-def checkPoint_clicked():
-    th = threading.Thread(target=checkPoint)
-    th.start()
-
-def checkPoint():
-    global conf
-    conf.reload()
-    if cbSelectMacro.get() == '낚시':
-        coords = calcCoordsFromConfig(conf, "fishing", True)
-    elif cbSelectMacro.get() == '일퀘':
-        coords = calcCoordsFromConfig(conf, "quest", True)
-
-    hwndname = ldplayerName
-    hwnd = win32gui.FindWindow(None, hwndname)
-
-    if hwnd >= 1:
-        left, top, right, bot = win32gui.GetWindowRect(hwnd)
-        w = right - left
-        h = bot - top
-        hwndDC = win32gui.GetWindowDC(hwnd)
-        mfcDC = win32ui.CreateDCFromHandle(hwndDC)
-        saveDC = mfcDC.CreateCompatibleDC()
-
-        saveBitMap = win32ui.CreateBitmap()
-        saveBitMap.CreateCompatibleBitmap(mfcDC, w, h)
-
-        saveDC.SelectObject(saveBitMap)
-
-        result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 0)
-
-        bmpinfo = saveBitMap.GetInfo()
-        bmpstr = saveBitMap.GetBitmapBits(True)
-        im = Image.frombuffer('RGB', (bmpinfo['bmWidth'], bmpinfo['bmHeight']), bmpstr, 'raw', 'BGRX', 0, 1)
-        win32gui.DeleteObject(saveBitMap.GetHandle())
-        saveDC.DeleteDC()
-        mfcDC.DeleteDC()
-        win32gui.ReleaseDC(hwnd, hwndDC)
-    else:
-        log.error(f"{hwndname} 창을 찾을 수 없습니다.")
-        return
-
-    if result == 1:
-        draw = ImageDraw.Draw(im)
-        if cbSelectMacro.get() == '일퀘':
-            randNum = [
-                (coords[-2][0], coords[-2][1]),
-                (coords[-1][0], coords[-1][1])
-            ]
-            coords.remove(randNum[0])
-            coords.remove(randNum[1])
-            draw.rectangle((randNum[0][0], randNum[0][1], randNum[1][0], randNum[1][1]), outline=(255,0,0), width=2)
-
-        for idx, pos in enumerate(coords):
-            draw.text(pos, f"{idx}", (255,0,0))
-        im.show()
 
 if __name__ == '__main__':
-
     root = tk.Tk()
     root.title(f"BanPoLoga {VERSION}")
     root.geometry("300x100+200+200")
-    # root.resizable(False, False)
+    root.resizable(False, False)
 
     lbWndName=tk.Label(root, text="창 이름:", width=10)
     lbWndName.grid(row=0, column=0)
@@ -538,14 +488,16 @@ if __name__ == '__main__':
     etWndName = tk.Entry(root, width=15)
     etWndName.bind("<Return>", setWindowName)
     etWndName.grid(row=0, column=1)
-    etWndName.insert(0, ldplayerName)
+    etWndName.insert(0, "LDPlayer")
 
     lbSelMacro=tk.Label(root, text="매크로 선택:", width=10)
     lbSelMacro.grid(row=1, column=0)
 
     macroList = [
         '낚시',
-        '일퀘'
+        '일퀘',
+        '상퀘',
+     
     ]
 
     cbSelectMacro=tk.ttk.Combobox(root, height=15,width=10, values=macroList)
@@ -555,15 +507,15 @@ if __name__ == '__main__':
     btnSelectMacro = tk.Button(root, text="설정", command=selectMacro_clicked)
     btnSelectMacro.grid(row=1, column=2)
 
-    btnCheckPoint = tk.Button(root, text="좌표확인", command=checkPoint_clicked)
-    btnCheckPoint.grid(row=1, column=3)
-
-    start_button = tk.Button(root, text="▶", command=start_button_clicked, width=15)
+    start_button = tk.Button(root, text="▶", command=fishing_start_button_clicked, width=15)
     start_button.grid(row=2, column=0)
 
     exit_button = tk.Button(root, text="종료", command=exit_button_clicked, width=15)
     exit_button.grid(row=3, column=0)
 
     puase_event.set()
+ 
+    
+    
 
     root.mainloop()

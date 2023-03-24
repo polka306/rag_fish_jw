@@ -24,6 +24,7 @@ VERSION = "230324"
 ldplayerName ="LDPlayer"
 #ldplayerName ="포샵"
 log = jwlog.jw_make_logger(f"BanPoLoga_{VERSION}")
+log.setLevel(jwlog.logging.DEBUG)
 
 stop_event = threading.Event()
 puase_event = threading.Event()
@@ -368,12 +369,12 @@ def merchant_quest():
             x = pos[0]
             y = pos[1]
 
-            if pyautogui.pixelMatchesColor(x,y, (219, 244, 178)):
+            if findColorinPixels(getPixelWnd(x,y,0), (219, 244, 178)):
                 time.sleep(delay)
                 jwClick(x,y)
                 log.info(f"(Pos idx:{idx})  상점스태프 아이템 클릭")
 
-            elif pyautogui.pixelMatchesColor(x,y, (128,153,227)): #퀘스트를 제출한다.
+            elif findColorinPixels(getPixelWnd(x,y,0), (128,153,227)): #퀘스트를 제출한다.
                 time.sleep(1)
                 jwClick(x,y)
                 log.info(f"(Pos idx:{idx}) 아이템 제출완료")                
@@ -384,7 +385,7 @@ def merchant_quest():
                 # 2 제출완료 이후에 실행되어야 하는 코드
 
                 #아이템이 이미 가방에 존재 할때 실행 
-                if pyautogui.pixelMatchesColor(x_after_send,y_after_send, (219,225,231)): #아이템을 눌러라
+                if findColorinPixels(getPixelWnd(x_after_send,y_after_send,0), (219,225,231)): #아이템을 눌러라
                     after_send_count = 0
                     sucsses_count -= 1
                     log.info(f"(Pos idx:{idx}) 아이템이 모자라서 완료 횟수를 차감합니다.")
@@ -396,35 +397,35 @@ def merchant_quest():
                         log.info(f"(Pos idx:{idx}) 현재 실행 : {coords_after_send_list[after_send_count]}")                        
                         after_send_count += 1
                         select_merchant = 1
-                elif not pyautogui.pixelMatchesColor(x_start_coords, y_start_coords, (128, 153, 227)): #퀘스트 제출이 완료되면 처음으로.
+                elif not findColorinPixels(getPixelWnd(x_start_coords, y_start_coords,0), (128, 153, 227)): #퀘스트 제출이 완료되면 처음으로.
                     log.info(f"(Pos idx:{idx}) {wait_time}초간 반응이 없어 퀘스트 창을 클릭합니다.")
                     jwClick(x_s,y_s)
 
-            elif pyautogui.pixelMatchesColor(x,y, (217,144,118)): 
+            elif findColorinPixels(getPixelWnd(x,y,0), (217,144,118)): 
                 jwClick(x,y)
                 log.info(f"획득경로 확인 중입니다")
                 time.sleep(delay)
                 
                 select_x,select_y = coords_select_merchant[0]                
-                if pyautogui.pixelMatchesColor(select_x,select_y, (255,239,174)):
+                if findColorinPixels(getPixelWnd(select_x,select_y,0), (255,239,174)):
                     time.sleep(delay)
                     jwClick(select_x,select_y)
                     log.info(f"(Pos idx:{idx}) 경로는  {coords_select_merchant_list[0]}")
                     select_merchant = 1
                 select_x,select_y = coords_select_merchant[1]
-                if not pyautogui.pixelMatchesColor(select_x,select_y, (255,239,174)): 
+                if not findColorinPixels(getPixelWnd(select_x,select_y,0), (255,239,174)): 
                     log.info(f"(Pos idx:{idx}) 경로는  {coords_select_merchant_list[1]}")
                     jwClick(select_x,select_y)
                     select_merchant = 2
-            #elif pyautogui.pixelMatchesColor(getPixelWnd(x,y, (255,239,174)): 
+            #elif findColorinPixels(getPixelWnd(getPixelWnd(x,y, (255,239,174)): 
             #    time.sleep(delay)
             #    jwClick(x,y)
             #    log.info(f"(Pos idx:{idx}) 추천경로Clicked") 
             
             # 로가 기준 
-            #elif pyautogui.pixelMatchesColor(getPixelWnd(x,y, (156,153,154)):
+            #elif findColorinPixels(getPixelWnd(getPixelWnd(x,y, (156,153,154)):
             # 반디 기준 
-            elif (pyautogui.pixelMatchesColor(x,y, (121,110,113)) & (select_merchant==1)):
+            elif (findColorinPixels(getPixelWnd(x,y,0), (121,110,113)) & (select_merchant==1)):
                 time.sleep(delay)
                 jwClick(x,y)                
                 log.info(f"(Pos idx:{idx}) 아이템을 구입하러 상점으로 갑니다. ")
@@ -435,7 +436,7 @@ def merchant_quest():
                     log.info(f"(Pos idx:{idx}) 현재 실행 : {coords_buy_1_list[buy_1_count]}")
                     buy_1_count += 1
 
-            elif (pyautogui.pixelMatchesColor(x,y, (121,110,113)) & (select_merchant==2)):
+            elif (findColorinPixels(getPixelWnd(x,y,0), (121,110,113)) & (select_merchant==2)):
                 time.sleep(delay)
                 jwClick(x,y)
                 log.info(f"(Pos idx:{idx}) 아이템을 구입하러 상점스태프에게 갑니다.") 
@@ -555,6 +556,7 @@ def checkPoint():
 
         for idx, pos in enumerate(coords):
             draw.text(pos, f"{idx}", (255,0,0))
+            log.debug(f"{idx}:{pyautogui.pixel(left+pos[0],top+pos[1])}")
         im.show()
 
 if __name__ == '__main__':

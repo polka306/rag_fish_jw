@@ -2,7 +2,7 @@ import pyautogui
 import time
 import random
 
-#pyautogui.mouseInfo()
+pyautogui.mouseInfo()
 
 coords_dict = {'1 제출(녹색)': (1900, 950),  
                '2제출완료': (1872, 1012), 

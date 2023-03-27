@@ -8,6 +8,7 @@ from PIL import ImageDraw
 from ctypes import windll
 from easydict import EasyDict
 import json
+import pyautogui
 
 # import numpy as np
 # import random
@@ -202,6 +203,7 @@ if __name__ == "__main__":
         draw = ImageDraw.Draw(im)
         for idx, pos in enumerate(coords):
             draw.text(pos, f"{idx}", (255,0,0))
+            print(f"{idx}:{pyautogui.pixel(pos[0],pos[1])}")
         # draw.rectangle((randNum[0][0], randNum[0][1], randNum[1][0], randNum[1][1]), outline=(255,0,0), width=2)
         im.show()
 

@@ -19,11 +19,12 @@ import lib.jw_log as jwlog
 
 DEBUG = False
 
-VERSION = "230322"
+VERSION = "230324"
 
 ldplayerName ="LDPlayer"
 #ldplayerName ="포샵"
 log = jwlog.jw_make_logger(f"BanPoLoga_{VERSION}")
+log.setLevel(jwlog.logging.DEBUG)
 
 stop_event = threading.Event()
 puase_event = threading.Event()
@@ -139,6 +140,8 @@ def fishing():
     global puase_event, stop_event, conf
     step = 1
     fail_count = 0 
+    error_count = 0
+    success_count = 0
     log.info(f"낚시 시작")
     while True:
 
@@ -179,20 +182,30 @@ def fishing():
                 jwClick(x-random_x, y-random_y)
                 step = 1
                 fail_count = 0
-                log.info("낚시 성공")
+                success_count += 1
+                log.info(f"낚시 성공, 총 {success_count}회 낚시 성공 했습니다.")
             else:
                 fail_count += 1
 
         if fail_count > 50 :
             step = 1
             fail_count = 0
+            error_count += 1
             log.error("에러발생함")
+        
+        if error_count > 10 and error_exit_box.get() :
+            log.error(f"에러발생횟수 = {error_count}, 낚시멈춤 체크박스 = {error_exit_box.get()}")
+            log.error("에러가 10번 발생하여 낚시를 중지합니다.")
+            break
 
         if stop_event.is_set():
             break
 
 def quest():
     global stop_event, conf
+    notice_board = 0
+    check_findcolor = 0
+    check_count_success = 0
     log.info(f"일퀘 시작")
     while True:
         coords = calcCoordsFromConfig(conf,'quest')
@@ -202,6 +215,7 @@ def quest():
         ]
         coords.remove(randNum[0])
         coords.remove(randNum[1])
+        delay = random.uniform(0.1, 0.5)
         
     # 좌표 순회
         for idx, pos in enumerate(coords):
@@ -220,95 +234,92 @@ def quest():
             w=random.randint(randNum[0][1], randNum[1][1])
 
             p = random.uniform(4 , 6)
-
-            if findColorinPixels(pixels, (231,145,101)):
-                delay = random.uniform(0.5, 1) 
-                time.sleep(delay) 
-                jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 일퀘 클릭")          
-                
             
-            elif findColorinPixels(pixels, (125,155,226)):
-                delay = random.uniform(0.5, 1) 
-                time.sleep(delay)
-                jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 일퀘 완료 건네기 좌표")
-                
+            if(notice_board == 0) :
+                if findColorinPixels(pixels, (231,145,101)):  
+                    jwClick(x, y)
+                    notice_board = 1
+                    log.info(f"(Pos idx:{idx}) 일퀘 클릭")   
 
-            elif findColorinPixels(pixels, (119, 88, 118)):
-                delay = random.uniform(0.5, 1) 
-                time.sleep(delay)
-                jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 스킵 화살용 좌표")
-                
+                elif findColorinPixels(pixels, (119, 88, 118)):
+                    jwClick(x, y)
+                    log.info(f"(Pos idx:{idx}) 스킵 화살용 좌표")
+                    check_findcolor = 1
 
-            elif findColorinPixels(pixels, (150, 226, 103)):
-                delay = random.uniform(0.5, 1) 
-                time.sleep(delay)
-                jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 스킵 아래 녹색 좌표")
-                
+                elif findColorinPixels(pixels, (150, 226, 103)):
+                    jwClick(x, y)
+                    log.info(f"(Pos idx:{idx}) 스킵 아래 녹색 좌표")
 
-            elif findColorinPixels(pixels, (255,248,230)):
-                delay = random.uniform(0.5, 1) 
-                time.sleep(delay)
-                jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 황금 테두리 하얀손가락")
-                
+                elif findColorinPixels(pixels, (255,248,230)):
+                    jwClick(x, y)
+                    log.info(f"(Pos idx:{idx}) 황금 테두리 하얀손가락")
 
-            elif findColorinPixels(pixels, (206, 231,165)):
-                delay = random.uniform(0.5, 1) 
-                time.sleep(delay)
-                jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 문답 지문 녹색2")            
-                
 
-            elif findColorinPixels(pixels, (206,240,156)):
-                delay = random.uniform(0.5, 1) 
-                time.sleep(delay)
-                jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 문답 지문 녹색1(위)+파란2 좌표")
-                
+                elif findColorinPixels(pixels, (206, 231,165)):
+                    jwClick(x, y)
+                    log.info(f"(Pos idx:{idx}) 문답 지문 녹색2")            
 
-            elif findColorinPixels(pixels, (212,237,176)):
-                delay = random.uniform(0.5, 1) 
-                time.sleep(delay)
-                jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 문답 지문 녹색1(위)+파란3 좌표")
-                
 
-            elif findColorinPixels(pixels, (125,153,227)):
-                delay = random.uniform(0.5, 1) 
-                time.sleep(delay)
-                jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 재료 건네기 좌표")
-                
+                elif findColorinPixels(pixels, (206,240,156)):
+                    jwClick(x, y)
+                    log.info(f"(Pos idx:{idx}) 문답 지문 녹색1(위)+파란2 좌표")
 
-            elif findColorinPixels(pixels, (205,232,164)):
-                delay = random.uniform(0.5, 1) 
-                time.sleep(delay)
-                jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 문답 지문 녹색 좌표(1지문)")
-                
 
-            elif findColorinPixels(pixels, (229,229,237), (1,1,1)):
-                delay = random.uniform(0.5, 1) 
-                time.sleep(delay)
-                jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 문답 지문 하얀색 좌표 = {x}, {y}")
-                
+                elif findColorinPixels(pixels, (212,237,176)):
+                    jwClick(x, y)
+                    log.info(f"(Pos idx:{idx}) 문답 지문 녹색1(위)+파란3 좌표")
 
-            elif findColorinPixels(pixels, (231,229,232), (1,1,1)):
-                delay = random.uniform(0.5, 1) 
-                time.sleep(delay)
-                jwClick(x, y)
-                log.info(f"(Pos idx:{idx}) 일퀘 우측 나가기 버튼")
 
-        time.sleep(1)
-        jwClick(e, w) # 좌측 일퀘 진행 부분 클릭
-        log.info(f"pos : {e}, {w} 퀘스트 진행 클릭")
-        time.sleep(p)
+                elif findColorinPixels(pixels, (125,153,227)):
+                    jwClick(x, y)
+                    log.info(f"(Pos idx:{idx}) 재료 건네기 좌표")
+
+
+                elif findColorinPixels(pixels, (205,232,164)):
+                    jwClick(x, y)
+                    log.info(f"(Pos idx:{idx}) 문답 지문 녹색 좌표(1지문)")
+
+
+                elif findColorinPixels(pixels, (229,229,237), (1,1,1)):
+                    jwClick(x, y)
+                    log.info(f"(Pos idx:{idx}) 문답 지문 하얀색 좌표 = {x}, {y}")
+
+                elif findColorinPixels(pixels, (231,229,232), (1,1,1)):
+                    jwClick(x, y)
+                    log.info(f"(Pos idx:{idx}) 일퀘 우측 나가기 버튼")
+                    check_findcolor = 1
+                else :
+                    check_findcolor = 1
+            elif notice_board == 1 :
+                if findColorinPixels(pixels, (125,155,226)):
+                    notice_board = 2
+                    jwClick(x, y)
+                    log.info(f"(Pos idx:{idx}) 일퀘 완료 건네기 좌표")
+                    check_findcolor = 0           
+            elif notice_board == 2 :
+                if findColorinPixels(pixels, (231,229,232), (1,1,1)):
+                    notice_board = 0
+                    jwClick(x, y)
+                    log.info(f"(Pos idx:{idx}) 일퀘 우측 나가기 버튼")
+                    check_findcolor = 1
+                    check_count_success += 1
+                    log.info(f"(Pos idx:{idx}) 이때까지 완료한 퀘스트 갯수 : {check_count_success}")
+            
+        if check_findcolor == 1 :
+            time.sleep(delay)
+            jwClick(e, w) # 좌측 일퀘 진행 부분 클릭
+            log.info(f"pos : {e}, {w} 퀘스트 진행 클릭")
+            time.sleep(p)
+            check_findcolor = 0
+        else :
+            time.sleep(delay)
+            check_findcolor = 1
         
+        if check_count_success == 10 and success_exit_box.get() :
+            log.info(f"퀘스트 성공 횟수 : {check_count_success} , 체크박스 : {success_exit_box.get()}")
+            log.info(f"(Pos idx:{idx}) 퀘스트를 10번 완료 하여 종료 합니다.")
+            break
+
         if stop_event.is_set():
             break
 
@@ -320,11 +331,13 @@ def merchant_quest():
     x_s, y_s = start_coord[0]
     delay = random.uniform(0.8, 1.2)
     select_merchant = 0
+    sucsses_count = 0
 
     jwClick(x_s,y_s)
     time.sleep(delay)
 
     while True:
+        delay = random.uniform(0.8, 1.2)
         coords_dict = {'1 제출(녹색)': (1900, 950),  
                '2제출완료': (1872, 1012), 
                '2-1 번 아이템': (1809,920),
@@ -338,7 +351,7 @@ def merchant_quest():
         x_start_coords, y_start_coords = coords[1]
 
         coords_select_merchant = calcCoordsFromConfig(conf, "merchant_quest", subkey="coords_select_merchant")
-        coords_select_merchant_list = ['일반상점', '아가미상점']
+        coords_select_merchant_list = ['일반상점', '아가미상점']        
 
         coords_after_send = calcCoordsFromConfig(conf, "merchant_quest", subkey="coords_after_send")
         x_after_send, y_after_send = coords_after_send[0]        
@@ -351,75 +364,94 @@ def merchant_quest():
         coords_buy_2_list = [('숫자1'), ('숫자5'),('녹색버튼'), ('구매버튼'), 
                              ('x버튼'), ('x버튼'), ('npc에게'),]
         
-        for x, y in coords : #퀘스트를 수령한다.
-            if findColorinPixels(getPixelWnd(x,y,1), (219, 244, 178)):
+        #for x, y in coords : #퀘스트를 수령한다.
+        for idx, pos in enumerate(coords):
+            x = pos[0]
+            y = pos[1]
+
+            if findColorinPixels(getPixelWnd(x,y,0), (219, 244, 178)):
                 time.sleep(delay)
                 jwClick(x,y)
-                print(f"1 제출(녹색)")
+                log.info(f"(Pos idx:{idx})  상점스태프 아이템 클릭")
 
-            elif findColorinPixels(getPixelWnd(x,y,1), (128,153,227)): #퀘스트를 제출한다.
+            elif findColorinPixels(getPixelWnd(x,y,0), (128,153,227)): #퀘스트를 제출한다.
                 time.sleep(1)
                 jwClick(x,y)
-                print(f"2 제출완료")
+                log.info(f"(Pos idx:{idx}) 아이템 제출완료")                
+                sucsses_count += 1
+                log.info(f"(Pos idx:{idx}) 현재까지 완료된 상점 퀘스트는 : {sucsses_count} 번 입니다.")
                 time.sleep(wait_time)
 
                 # 2 제출완료 이후에 실행되어야 하는 코드
-                if findColorinPixels(getPixelWnd(x_after_send,y_after_send,1), (219,225,231)): #아이템을 눌러라
-                    after_send_count=0
+
+                #아이템이 이미 가방에 존재 할때 실행 
+                if findColorinPixels(getPixelWnd(x_after_send,y_after_send,0), (219,225,231)): #아이템을 눌러라
+                    after_send_count = 0
+                    sucsses_count -= 1
+                    log.info(f"(Pos idx:{idx}) 아이템이 모자라서 완료 횟수를 차감합니다.")
+                    log.info(f"(Pos idx:{idx}) 현재까지 완료된 상점 퀘스트는 : {sucsses_count} 번 입니다.")
                     for x_1,y_1 in coords_after_send :
                         time.sleep(delay)
                         jwClick(x_1,y_1)
-                        print(f'현재 실행 : {coords_after_send_list[after_send_count]}')
-                        after_send_count+=1
-                elif not findColorinPixels(getPixelWnd(x_start_coords, y_start_coords,1), (128, 153, 227)): #퀘스트 제출이 완료되면 처음으로.
-                    print(f"{wait_time}초간 반응이 없어 {start_coord}를 클릭합니다.")
+                        log.info(f"(Pos idx:{idx}) 아이템을 구입하러 상점으로 갑니다")
+                        log.info(f"(Pos idx:{idx}) 현재 실행 : {coords_after_send_list[after_send_count]}")                        
+                        after_send_count += 1
+                        select_merchant = 1
+                elif not findColorinPixels(getPixelWnd(x_start_coords, y_start_coords,0), (128, 153, 227)): #퀘스트 제출이 완료되면 처음으로.
+                    log.info(f"(Pos idx:{idx}) {wait_time}초간 반응이 없어 퀘스트 창을 클릭합니다.")
                     jwClick(x_s,y_s)
 
-            elif findColorinPixels(getPixelWnd(x,y,1), (217,144,118)): 
+            elif findColorinPixels(getPixelWnd(x,y,0), (217,144,118)): 
                 jwClick(x,y)
-                print(f"획득경로 1-1")
-                time.sleep(wait_time)
+                log.info(f"획득경로 확인 중입니다")
+                time.sleep(delay)
                 
                 select_x,select_y = coords_select_merchant[0]                
-                if findColorinPixels(getPixelWnd(select_x,select_y,1), (255,239,174)):
+                if findColorinPixels(getPixelWnd(select_x,select_y,0), (255,239,174)):
                     time.sleep(delay)
                     jwClick(select_x,select_y)
-                    print(f"경로는  {coords_select_merchant_list[0]}")
+                    log.info(f"(Pos idx:{idx}) 경로는  {coords_select_merchant_list[0]}")
                     select_merchant = 1
                 select_x,select_y = coords_select_merchant[1]
-                if not findColorinPixels(getPixelWnd(select_x,select_y,1), (255,239,174)): 
-                    print(f"경로는  {coords_select_merchant_list[1]}")
+                if not findColorinPixels(getPixelWnd(select_x,select_y,0), (255,239,174)): 
+                    log.info(f"(Pos idx:{idx}) 경로는  {coords_select_merchant_list[1]}")
                     jwClick(select_x,select_y)
                     select_merchant = 2
-            #elif findColorinPixels(getPixelWnd(x,y, (255,239,174)): 
+            #elif findColorinPixels(getPixelWnd(getPixelWnd(x,y, (255,239,174)): 
             #    time.sleep(delay)
             #    jwClick(x,y)
-            #    print(f"추천경로Clicked") 
+            #    log.info(f"(Pos idx:{idx}) 추천경로Clicked") 
             
             # 로가 기준 
-            #elif findColorinPixels(getPixelWnd(x,y, (156,153,154)):
+            #elif findColorinPixels(getPixelWnd(getPixelWnd(x,y, (156,153,154)):
             # 반디 기준 
-            elif (findColorinPixels(getPixelWnd(x,y,1), (121,110,113)) & (select_merchant==1)):
+            elif (findColorinPixels(getPixelWnd(x,y,0), (121,110,113)) & (select_merchant==1)):
                 time.sleep(delay)
                 jwClick(x,y)                
-                print(f"일반상점")
+                log.info(f"(Pos idx:{idx}) 아이템을 구입하러 상점으로 갑니다. ")
                 buy_1_count=0
                 for x_2,y_2 in coords_buy_1 :
                     time.sleep(delay)
                     jwClick(x_2, y_2)
-                    print(f'현재 실행 : {coords_buy_1_list[buy_1_count]}')
+                    log.info(f"(Pos idx:{idx}) 현재 실행 : {coords_buy_1_list[buy_1_count]}")
                     buy_1_count += 1
 
-            elif (findColorinPixels(getPixelWnd(x,y,1), (121,110,113)) & (select_merchant==2)):
+            elif (findColorinPixels(getPixelWnd(x,y,0), (121,110,113)) & (select_merchant==2)):
                 time.sleep(delay)
                 jwClick(x,y)
-                print(f"아가미가시") 
+                log.info(f"(Pos idx:{idx}) 아이템을 구입하러 상점스태프에게 갑니다.") 
                 buy_2_count=0
                 for x_3,y_3 in coords_buy_2 :
                     time.sleep(delay)
                     jwClick(x_3, y_3)
-                    print(f'현재 실행 : {coords_buy_2_list[buy_2_count]}')
+                    log.info(f"(Pos idx:{idx}) 현재 실행 : {coords_buy_2_list[buy_2_count]}")
                     buy_2_count += 1
+        
+        if sucsses_count == 10 and success_exit_box.get() :
+            log.info(f"퀘스트 성공 횟수 : {sucsses_count} , 체크박스 : {success_exit_box.get()}")
+            log.info(f"(Pos idx:{idx}) 퀘스트를 10번 완료 하여 종료 합니다.")
+            break
+
         if stop_event.is_set():
             break
 
@@ -524,13 +556,14 @@ def checkPoint():
 
         for idx, pos in enumerate(coords):
             draw.text(pos, f"{idx}", (255,0,0))
+            log.debug(f"{idx}:{pyautogui.pixel(left+pos[0],top+pos[1])}")
         im.show()
 
 if __name__ == '__main__':
 
     root = tk.Tk()
     root.title(f"BanPoLoga {VERSION}")
-    root.geometry("300x100+200+200")
+    root.geometry("400x100+200+200")
     # root.resizable(False, False)
 
     lbWndName=tk.Label(root, text="창 이름:", width=10)
@@ -538,7 +571,7 @@ if __name__ == '__main__':
 
     etWndName = tk.Entry(root, width=15)
     etWndName.bind("<Return>", setWindowName)
-    etWndName.grid(row=0, column=1)
+    etWndName.grid(row=0, column=1,sticky="we")
     etWndName.insert(0, ldplayerName)
 
     lbSelMacro=tk.Label(root, text="매크로 선택:", width=10)
@@ -550,21 +583,29 @@ if __name__ == '__main__':
         '상점퀘'
     ]
 
-    cbSelectMacro=tk.ttk.Combobox(root, height=15,width=10, values=macroList)
-    cbSelectMacro.grid(row=1, column=1)
+    cbSelectMacro=tk.ttk.Combobox(root, height=15,width=15, values=macroList)
+    cbSelectMacro.grid(row=1, column=1,sticky="we")
     cbSelectMacro.set("낚시")
 
     btnSelectMacro = tk.Button(root, text="설정", command=selectMacro_clicked)
-    btnSelectMacro.grid(row=1, column=2)
+    btnSelectMacro.grid(row=1, column=2,sticky="we")
 
     btnCheckPoint = tk.Button(root, text="좌표확인", command=checkPoint_clicked)
-    btnCheckPoint.grid(row=1, column=3)
+    btnCheckPoint.grid(row=1, column=3,sticky="we")
 
     start_button = tk.Button(root, text="▶", command=start_button_clicked, width=15)
-    start_button.grid(row=2, column=0)
+    start_button.grid(row=2, column=0,sticky="we")
 
     exit_button = tk.Button(root, text="종료", command=exit_button_clicked, width=15)
-    exit_button.grid(row=3, column=0)
+    exit_button.grid(row=3, column=0,sticky="we")
+
+    error_exit_box = tk.IntVar()
+    error_chk = tk.Checkbutton(root, text="낚시 : 에러 10번나면 멈춤", variable=error_exit_box, onvalue=1, offvalue=0)
+    error_chk.grid(row=2, column=1,sticky="w")
+
+    success_exit_box = tk.IntVar()
+    success_chk = tk.Checkbutton(root, text="퀘스트 : 10번 완료되면 멈춤", variable=success_exit_box, onvalue=1, offvalue=0)
+    success_chk.grid(row=3, column=1,sticky="w")
 
     puase_event.set()
 

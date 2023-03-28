@@ -19,7 +19,7 @@ import lib.jw_log as jwlog
 
 DEBUG = False
 
-VERSION = "230326"
+VERSION = "230322"
 
 ldplayerName ="LDPlayer"
 #ldplayerName ="포샵"
@@ -496,7 +496,6 @@ def selectMacro_clicked():
     ldplayerName = etWndName.get()
     conf.update({'windowName':ldplayerName})
     conf.export('./config.json')
-    log.info("설정 완료")
 
 def checkPoint_clicked():
     th = threading.Thread(target=checkPoint)
@@ -562,7 +561,7 @@ if __name__ == '__main__':
 
     root = tk.Tk()
     root.title(f"BanPoLoga {VERSION}")
-    root.geometry("400x125+200+200")
+    root.geometry("400x100+200+200")
     # root.resizable(False, False)
 
     lbWndName=tk.Label(root, text="창 이름:", width=10)
@@ -570,7 +569,7 @@ if __name__ == '__main__':
 
     etWndName = tk.Entry(root, width=15)
     etWndName.bind("<Return>", setWindowName)
-    etWndName.grid(row=0, column=1,sticky="we")
+    etWndName.grid(row=0, column=1)
     etWndName.insert(0, ldplayerName)
 
     lbSelMacro=tk.Label(root, text="매크로 선택:", width=10)
@@ -582,21 +581,21 @@ if __name__ == '__main__':
         '상점퀘'
     ]
 
-    cbSelectMacro=tk.ttk.Combobox(root, height=15,width=15, values=macroList)
-    cbSelectMacro.grid(row=1, column=1,sticky="we")
+    cbSelectMacro=tk.ttk.Combobox(root, height=15,width=10, values=macroList)
+    cbSelectMacro.grid(row=1, column=1)
     cbSelectMacro.set("낚시")
 
     btnSelectMacro = tk.Button(root, text="설정", command=selectMacro_clicked)
-    btnSelectMacro.grid(row=1, column=2,sticky="we")
+    btnSelectMacro.grid(row=1, column=2)
 
     btnCheckPoint = tk.Button(root, text="좌표확인", command=checkPoint_clicked)
-    btnCheckPoint.grid(row=1, column=3,sticky="we")
+    btnCheckPoint.grid(row=1, column=3)
 
     start_button = tk.Button(root, text="▶", command=start_button_clicked, width=15)
-    start_button.grid(row=2, column=0,sticky="we")
+    start_button.grid(row=2, column=0)
 
     exit_button = tk.Button(root, text="종료", command=exit_button_clicked, width=15)
-    exit_button.grid(row=3, column=0,sticky="we")
+    exit_button.grid(row=3, column=0)
 
     error_exit_box = tk.IntVar()
     error_chk = tk.Checkbutton(root, text="낚시 : 에러 10번나면 멈춤", variable=error_exit_box, onvalue=1, offvalue=0)
@@ -605,7 +604,5 @@ if __name__ == '__main__':
     success_exit_box = tk.IntVar()
     success_chk = tk.Checkbutton(root, text="퀘스트 : 10번 완료되면 멈춤", variable=success_exit_box, onvalue=1, offvalue=0)
     success_chk.grid(row=3, column=1,sticky="w")
-    
-    puase_event.set()
 
     root.mainloop()

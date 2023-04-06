@@ -18,10 +18,10 @@ import json
 import lib.jw_log as jwlog
 
 DEBUG = False
-VERSION = "Ver_1_1"
+
+VERSION = "230327"
 
 ldplayerName ="LDPlayer"
-MouseCheck = "Free"
 #ldplayerName ="포샵"
 log = jwlog.jw_make_logger(f"BanPoLoga_{VERSION}")
 #log.setLevel(jwlog.logging.DEBUG)
@@ -124,57 +124,40 @@ def jwClick(x, y, offset=(0, 0)):
     # pyautogui.click(x, y)
     x = x - offset[0]
     y = y - offset[1]
-    if MouseCheck == "NotFree" :
-            pyautogui.click(x, y)
-    elif MouseCheck == "Free" :
-        global ldplayerName
-        hwnd = win32gui.FindWindow(None, ldplayerName)
-        if hwnd >=1:    
-            log.debug(f"click {x}, {y}")
-            pos = (x,y)
-            cli_pos = win32gui.ScreenToClient(hwnd, pos)
-            lParam = win32api.MAKELONG(cli_pos[0]-1, cli_pos[1]-34)
-            hWnd1 = win32gui.FindWindowEx(hwnd, None, None, None)
-            win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
-            win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, lParam)
-        
+    global ldplayerName
+    hwnd = win32gui.FindWindow(None, ldplayerName)
+    if hwnd >=1:    
+        log.debug(f"click {x}, {y}")
+        pos = (x,y)
+        cli_pos = win32gui.ScreenToClient(hwnd, pos)
+        lParam = win32api.MAKELONG(cli_pos[0]-1, cli_pos[1]-34)
+        hWnd1 = win32gui.FindWindowEx(hwnd, None, None, None)
+        win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
+        win32gui.SendMessage(hWnd1, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, lParam)
 
-conf = JsonConfigFileManager(f'./config_{VERSION}.json')
+conf = JsonConfigFileManager('./config.json')
 ldplayerName = conf.values.windowName
-MouseCheck = conf.values.MouseFree
 
-# 낚시 메크로
 def fishing():
     global puase_event, stop_event, conf
     step = 1
     fail_count = 0 
     error_count = 0
     success_count = 0
-    bait_setting = 0
     log.info(f"낚시 시작")
     while True:
 
         # 좌표 리스트    
-        coords = calcCoordsFromConfig(conf,"fishing",subkey="fishing_point")
+        coords = calcCoordsFromConfig(conf,'fishing')
         if coords == -1:
             continue
 
         x,y = coords[0]
-        bait_x, bait_y = coords[1]
         pixels = getPixelWnd(x, y, 1)
-        bait_pixels = getPixelWnd(bait_x, bait_y, 1)
         if pixels == -1:
             continue
-        if(findColorinPixels(bait_pixels, (255,255,255))):
-            bait_setting = 1
-
-        if stop_event.is_set():
-            break
-                
-        if bait_setting == 1:
-            log.info("미끼가 지렁이라서 낚시를 중지합니다.")
-            stop_event.set()
-        elif step==1 and bait_setting == 0 :
+        
+        if step==1 :
             if(findColorinPixels(pixels, (228,228,243))):
                 time.sleep(random.uniform(0.5, 1))
                 random_x = random.randint(0,20)
@@ -186,15 +169,16 @@ def fishing():
                 log.info("낚시 시작")
             else:
                 fail_count += 1
-        elif step==2 and bait_setting ==0:
+        elif step==2:
             if(findColorinPixels(pixels, (229,222,243))):
                 step = 3
                 fail_count = 0
                 log.info("낚시 중")
             else:
                 fail_count += 1
-        elif step == 3 and bait_setting ==0:
-            if(findColorinPixels(pixels, (214,231,187))):
+        elif step == 3:
+            if(findColorinPixels(pixels, (214,231,187 ))):
+                time.sleep(random.uniform(0, 0.2))
                 random_x = random.randint(0,20)
                 random_y = random.randint(0,5)
                 jwClick(x-random_x, y-random_y)
@@ -203,7 +187,7 @@ def fishing():
                 success_count += 1
                 log.info(f"낚시 성공, 총 {success_count}회 낚시 성공 했습니다.")
             else:
-                fail_count += 1      
+                fail_count += 1
 
         if fail_count > 50 :
             step = 1
@@ -211,81 +195,13 @@ def fishing():
             error_count += 1
             log.error("에러발생함")
         
-        if error_count >= 10 and error_exit_box.get() :
+        if error_count > 10 and error_exit_box.get() :
             log.error(f"에러발생횟수 = {error_count}, 낚시멈춤 체크박스 = {error_exit_box.get()}")
             log.error("에러가 10번 발생하여 낚시를 중지합니다.")
-            stop_event.set()
+            break
 
-#퀘스트 시작전 일일퀘스트 받는 루틴
-def Start_Quest():
-    global stop_event, conf
-    gotoboard_coords = calcCoordsFromConfig(conf, "start_quest", subkey="gotoboard")
-    gotoboard_list = ['카니발 클릭', '의뢰소 클릭', '즉시이동 클릭','게시판 도착']
-    board_coord = calcCoordsFromConfig(conf, "start_quest", subkey="board_coord")
-    board_coord_list = ['1번 의뢰 클릭', '2번 의뢰 클릭', '3번 의뢰 클릭', '4번 의뢰 클릭', '5번 의뢰 클릭', '6번 의뢰 클릭', '7번 의뢰 클릭', '8번 의뢰 클릭', '9번 의뢰 클릭', '10번 의뢰 클릭']
-    expected_button_coords = calcCoordsFromConfig(conf, "start_quest", subkey="expected_button")
-    expected_x, expected_y = expected_button_coords[0]
-    confirm_x, confirm_y = expected_button_coords[1]
-    exit_x, exit_y = expected_button_coords[2]
-    count = 0
-
-    #카니발 눌러서 게시판 까지 
-    for idx, pos in enumerate(gotoboard_coords) :        
         if stop_event.is_set():
             break
-        x = pos[0]
-        y = pos[1]
-        delay = random.uniform(1, 1.2)
-        time.sleep(delay)
-        if count == 3:
-            log.info(f"(Pos idx:{idx}) 게시판에 도착하기를 기다리고 있습니다. ")
-            while(not pyautogui.pixelMatchesColor(x, y, (174,140,99))):
-                if stop_event.is_set():
-                    break
-                continue
-            log.info(f"(Pos idx:{idx}) 게시판에 도착하였습니다. ")
-            break
-        if stop_event.is_set():
-            break
-        jwClick(x,y)
-        time.sleep(delay)
-        log.info(f"(Pos idx:{idx}) {gotoboard_list[count]}")
-        count+=1
-
-    if stop_event.is_set():
-        return
-
-    count=0
-    time.sleep(delay)
-
-    #게시판에서 퀘스트 하나씩 눌러서 수령
-    for idx, pos in enumerate(board_coord):
-        if stop_event.is_set():
-            break
-        x = pos[0]
-        y = pos[1]
-        delay = random.uniform(1,1.2)
-        time.sleep(delay)        
-        jwClick(x,y)
-        log.info(f"(Pos idx:{idx}) {board_coord_list[count]}")
-        count += 1
-        time.sleep(delay)
-        jwClick(confirm_x, confirm_y)
-        log.info(f"(Pos idx:{idx}) 수락 버튼 클릭")
-        time.sleep(delay)
-
-    if stop_event.is_set():
-        return
-
-    #게시판 나가기 
-    jwClick(exit_x, exit_y)
-    time.sleep(delay)
-    log.info(f"(Pos idx:{idx}) 게시판 나가기 클릭")
-
-
-
-def quest_WndClick(x,y,offset):
-    jwClick(x, y-offset)
 
 def quest():
     global stop_event, conf, offset_y_grid
@@ -293,17 +209,9 @@ def quest():
     check_findcolor = 0
     check_count_success = 0
     error_count = 0
-
-    if(StartQuest_box.get()):
-        log.info("퀘스트 받기가 체크 되어 있어 퀘스트 받기를 실행합니다.")
-        Start_Quest()
-
     log.info(f"일퀘 시작")
     
     while True:
-        if stop_event.is_set():
-            break
-        
         coords = calcCoordsFromConfig(conf,'quest')
         randNum = [
             (coords[-2][0], coords[-2][1]),
@@ -311,8 +219,8 @@ def quest():
         ]
         coords.remove(randNum[0])
         coords.remove(randNum[1])
-        delay = random.uniform(0.5, 1)     
-
+        delay = random.uniform(0.5, 1)
+        
     # 좌표 순회
         for idx, pos in enumerate(coords):
             x = pos[0]
@@ -330,17 +238,12 @@ def quest():
             w=random.randint(randNum[0][1]-quest_y_offset, randNum[1][1]-quest_y_offset)
 
             p = random.uniform(4 , 6)
-
-            if stop_event.is_set():
-                break
-
-            time.sleep(delay/2)
-
+            
             if(notice_board == 0) :
                 if findColorinPixels(pixels, (231,145,101)):  
                     jwClick(x, y)
                     notice_board = 1
-                    log.info(f"(Pos idx:{idx}) 완료된 일퀘 클릭")   
+                    log.info(f"(Pos idx:{idx}) 일퀘 클릭")   
 
                 elif findColorinPixels(pixels, (119, 88, 118)):
                     jwClick(x, y)
@@ -384,11 +287,6 @@ def quest():
                 elif findColorinPixels(pixels, (229,229,237), (1,1,1)):
                     jwClick(x, y)
                     log.info(f"(Pos idx:{idx}) 문답 지문 하얀색 좌표 = {x}, {y}")
-                # 완료 안된 퀘스트 열었을때 대처 
-                elif (pyautogui.pixelMatchesColor(x,y, (255, 255, 255))) and (pyautogui.pixelMatchesColor((x-50),y, (255, 255, 255))):
-                #(findColorinPixels(pixels, (255,255,255), (1,1,1))) & (findColorinPixels(pixels, (255,255,255), (1,1,1))):
-                    quest_WndClick(e, w,quest_y_offset) # 좌측 일퀘 진행 부분 클릭
-                    log.info(f"(Pos idx:{idx}) 퀘스트 창 닫기 = {x}, {y}")
 
                 elif findColorinPixels(pixels, (231,229,232), (1,1,1)):
                     jwClick(x, y)
@@ -410,7 +308,6 @@ def quest():
                     notice_board = 0
                     log.info(f"(Pos idx:{idx}) 에러나서 게시판 우측 나가기 버튼 클릭")
                     check_findcolor = 0
-                    error_count =0
             elif notice_board == 2 :
                 if findColorinPixels(pixels, (231,229,232), (1,1,1)):
                     time.sleep(delay)
@@ -427,26 +324,10 @@ def quest():
                     notice_board = 0
                     log.info(f"(Pos idx:{idx}) 에러나서 게시판 우측 나가기 버튼 클릭")
                     check_findcolor = 0
-                    error_count =0
-        # 퀘스트 끝나고 상점의뢰 버튼 체크 되어 있을때 실행 
-        if check_count_success == 10 and QuestToMerchant_box.get() :
-            log.info(f"퀘스트 성공 횟수 : {check_count_success} , 체크박스 : {QuestToMerchant_box.get()}")
-            log.info(f"(Pos idx:{idx}) 퀘스트를 10번 완료 하여 상점의뢰를 진행합니다..")
-            QuestToMerchant()
-            break
-        
-        # 퀘스트 끝나고 멈춤 체크 되어 있을때 실행 
-        if check_count_success == 10 and success_exit_box.get() :
-            log.info(f"퀘스트 성공 횟수 : {check_count_success} , 체크박스 : {success_exit_box.get()}")
-            log.info(f"(Pos idx:{idx}) 퀘스트를 10번 완료 하여 종료 합니다.")
-            stop_event.set()        
-        
-        # 위 for 문에서 지정 색상을 찾았을때는 퀘스트 버튼 클릭 안함 
+            
         if check_findcolor == 1 :
             time.sleep(delay)
-            quest_WndClick(e, w,quest_y_offset) # 좌측 일퀘 진행 부분 클릭
-            time.sleep(0.5)
-            quest_WndClick(e, w,quest_y_offset) # 좌측 일퀘 진행 부분 클릭
+            jwClick(e, w) # 좌측 일퀘 진행 부분 클릭
             log.info(f"pos : {e}, {w} 퀘스트 진행 클릭")
             time.sleep(p)
             check_findcolor = 0
@@ -454,41 +335,17 @@ def quest():
             time.sleep(delay)
             check_findcolor = 1
         
-        error_count = 0
-        time.sleep(delay)
+        if check_count_success == 10 and success_exit_box.get() :
+            log.info(f"퀘스트 성공 횟수 : {check_count_success} , 체크박스 : {success_exit_box.get()}")
+            log.info(f"(Pos idx:{idx}) 퀘스트를 10번 완료 하여 종료 합니다.")
+            break
 
-#퀘스트 끝나고 상점의뢰 받으러 가는부분
-def QuestToMerchant():
-    global stop_event, conf, quest_y_offset
-    log.info("일퀘가 끝나서 상점퀘스트 의뢰를 받으러 갑니다.")
-
-    coords = calcCoordsFromConfig(conf, "QuestToMerchant", subkey="QuestToMerchant_coords")
-    coords_list = ['엑스버튼', '빈 화면','카니발 버튼', '상점의뢰','즉시이동','의뢰 수락','의뢰 동의','나가기 버튼','첫 좌표']
-    arrival_coords = calcCoordsFromConfig(conf,  "QuestToMerchant", subkey="arrival_merchant")
-    arrival_x, arrival_y = arrival_coords[0]
-    QTM_count = 0
-    for idx, pos in enumerate(coords):
-        x = pos[0]
-        y = pos[1]
-        delay=random.uniform(1.2, 1.5)
-        time.sleep(delay)        
-        jwClick(x,y)
-        log.info(f"(Pos idx:{idx}) {coords_list[QTM_count]}을(를) 눌렀습니다. ")
-        if(QTM_count == 4):
-            log.info(f"(Pos idx:{idx}) 상점 NPC 한테 도착하기를 기다리고 있습니다. ")
-            while(not pyautogui.pixelMatchesColor(arrival_x,arrival_y, (163,204,253))):
-                continue
-            log.info(f"(Pos idx:{idx}) 상점 NPC 한테 도착하였습니다. ")
-        QTM_count += 1
         if stop_event.is_set():
             break
-    merchant_quest()
 
-#상점의뢰 할때 offset 적용 위치 클릭
 def merchant_questWndClick(x,y,offset):
     jwClick(x, y-offset)
 
-#상점의뢰 
 def merchant_quest():
     global stop_event, conf, quest_y_offset
     log.info(f"(상점퀘 시작")
@@ -504,22 +361,29 @@ def merchant_quest():
     time.sleep(delay)
 
     while True:
-        delay = random.uniform(0.8, 1.2)        
+        delay = random.uniform(0.8, 1.2)
+        coords_dict = {'1 제출(녹색)': (1900, 950),  
+               '2제출완료': (1872, 1012), 
+               '2-1 번 아이템': (1809,920),
+               '플뤄스버튼': (1746,982),
+               '획득경로':(1858,1015),
+               '추천경로':(1783,915),
+               '직구':(1881, 982),}
         
-        # 상점의뢰 퀘스트 위치 
         coords = calcCoordsFromConfig(conf, "merchant_quest", subkey="coords")
+
         x_start_coords, y_start_coords = coords[1]
-        # 일반상점, 아가미 상점 판단위치  
+
         coords_select_merchant = calcCoordsFromConfig(conf, "merchant_quest", subkey="coords_select_merchant")
         coords_select_merchant_list = ['일반상점', '아가미상점']        
-        # 아이템 있을때 추천경로 
+
         coords_after_send = calcCoordsFromConfig(conf, "merchant_quest", subkey="coords_after_send")
         x_after_send, y_after_send = coords_after_send[0]        
         coords_after_send_list = ['2-1번 아이템', 'Get 버튼', '상점으로 이동',]
-        # 일반 상점 아이템 구입 
+
         coords_buy_1 = calcCoordsFromConfig(conf, "merchant_quest", subkey="coords_buy_1")
         coords_buy_1_list = ['숫자2', '숫자0', '녹색버튼', '구매버튼', 'x버튼']
-        # 아가미 상점 아이템 구입
+
         coords_buy_2 = calcCoordsFromConfig(conf, "merchant_quest", subkey="coords_buy_2")
         coords_buy_2_list = [('숫자1'), ('숫자5'),('녹색버튼'), ('구매버튼'), 
                              ('x버튼'), ('x버튼')]
@@ -578,6 +442,10 @@ def merchant_quest():
                     log.info(f"(Pos idx:{idx}) 경로는  {coords_select_merchant_list[1]}")
                     jwClick(select_x,select_y)
                     select_merchant = 2
+            #elif pyautogui.pixelMatchesColor(getPixelWnd(x,y, (255,239,174)): 
+            #    time.sleep(delay)
+            #    jwClick(x,y)
+            #    log.info(f"(Pos idx:{idx}) 추천경로Clicked") 
             
             # 로가 기준 
             #elif pyautogui.pixelMatchesColor(getPixelWnd(x,y, (156,153,154)):
@@ -611,21 +479,17 @@ def merchant_quest():
                 time.sleep(delay)
                 merchant_questWndClick(x_s,y_s,quest_y_offset)
                 log.info(f"(Pos idx:{idx}) 현재 실행 : 퀘스트 창 클릭")
-            
-            if stop_event.is_set():
-                break
         
         if sucsses_count == 10 and success_exit_box.get() :
             log.info(f"퀘스트 성공 횟수 : {sucsses_count} , 체크박스 : {success_exit_box.get()}")
             log.info(f"퀘스트를 10번 완료 하여 종료 합니다.")
-            stop_event.set()
+            break
 
         if stop_event.is_set():
             break
 
 main_thread = threading.Thread(target=fishing)
 pauseFlag = True
-
 def start_button_clicked():
     global pauseFlag, start_button, main_thread
     if pauseFlag == True:
@@ -655,7 +519,7 @@ def setWindowName(event):
     ldplayerName = etWndName.get()
 
 def selectMacro_clicked():
-    global cbSelectMacro, main_thread, ldplayerName, VERSION
+    global cbSelectMacro, main_thread, ldplayerName
     if cbSelectMacro.get() == '낚시':
         main_thread = threading.Thread(target=fishing)
     elif cbSelectMacro.get() == '일퀘':
@@ -665,7 +529,7 @@ def selectMacro_clicked():
 
     ldplayerName = etWndName.get()
     conf.update({'windowName':ldplayerName})
-    conf.export('./config_{VERSION}.json')
+    conf.export('./config.json')
     log.info("설정 완료")
 
 def checkPoint_clicked():
@@ -735,22 +599,21 @@ def offset_quest_location() :
 
 if __name__ == '__main__':
 
-    # 창 크기 및 타이틀
     root = tk.Tk()
     root.title(f"BanPoLoga {VERSION}")
-    root.geometry("320x250+200+200")
+    root.geometry("400x160+200+200")
     # root.resizable(False, False)
 
-    # 창이름 설정 관련 
+    # 창이름 관련 
     lbWndName=tk.Label(root, text="창 이름:", width=10)
     lbWndName.grid(row=0, column=0,padx=5)
 
-    etWndName = tk.Entry(root, width=10)
+    etWndName = tk.Entry(root, width=15)
     etWndName.bind("<Return>", setWindowName)
     etWndName.grid(row=0, column=1,sticky="we",padx=5)
     etWndName.insert(0, ldplayerName)
     
-    # 디버그용 좌표 확인 
+    #좌표 확인 하는 버튼 
     btnCheckPoint = tk.Button(root, text="좌표확인", command=checkPoint_clicked)
     btnCheckPoint.grid(row=0, column=2,sticky="we",padx=5)
 
@@ -764,48 +627,33 @@ if __name__ == '__main__':
         '상점퀘'
     ]
 
-    cbSelectMacro=tk.ttk.Combobox(root, height=15,width=10, values=macroList)
+    
+
+    cbSelectMacro=tk.ttk.Combobox(root, height=15,width=15, values=macroList)
     cbSelectMacro.grid(row=1, column=1,sticky="we",padx=5)
-    cbSelectMacro.set("일퀘")
+    cbSelectMacro.set("낚시")
 
     btnSelectMacro = tk.Button(root, text="설정", command=selectMacro_clicked)
     btnSelectMacro.grid(row=1, column=2,sticky="we",padx=5)
 
     # 실행 과 종료 
+
     start_button = tk.Button(root, text="▶", command=start_button_clicked, width=15)
     start_button.grid(row=4, column=0,sticky="we",padx=5)
 
     exit_button = tk.Button(root, text="종료", command=exit_button_clicked, width=15)
-    exit_button.grid(row=4, column=1,sticky="we",padx=5)
+    exit_button.grid(row=5, column=0,sticky="we",padx=5)
 
-    # 실행 옵션 
-    optionName=tk.Label(root, text="옵션 선택", width=10)
-    optionName.grid(row=6, column=0,columnspan=2,sticky="we")
-
+    # 낚시 퀘스트 옵션 
     error_exit_box = tk.IntVar()
     error_chk = tk.Checkbutton(root, text="낚시 : 에러 10번나면 멈춤", variable=error_exit_box, onvalue=1, offvalue=0)
-    error_chk.grid(row=7, column=0,columnspan=3,sticky="w",padx=5)
-    error_chk.select()
-
-    StartQuest_box = tk.IntVar()
-    StartQuest_chk = tk.Checkbutton(root, text="일일 퀘스트 받는거 부터 시작", variable=StartQuest_box, onvalue=1, offvalue=0)
-    StartQuest_chk.grid(row=8, column=0,columnspan=3,sticky="w",padx=5)
-    StartQuest_chk.select()
-
-    QuestToMerchant_box = tk.IntVar()
-    QuestToMerchant_chk = tk.Checkbutton(root, text="퀘스트가 끝나면 상점의뢰 바로 시작", variable=QuestToMerchant_box, onvalue=1, offvalue=0)
-    QuestToMerchant_chk.grid(row=9, column=0,columnspan=3,sticky="w",padx=5)
-    QuestToMerchant_chk.select()
+    error_chk.grid(row=4, column=1,sticky="w",padx=5)
 
     success_exit_box = tk.IntVar()
     success_chk = tk.Checkbutton(root, text="퀘스트 : 10번 완료되면 멈춤", variable=success_exit_box, onvalue=1, offvalue=0)
-    success_chk.grid(row=10, column=0,columnspan=3,sticky="w",padx=5)
+    success_chk.grid(row=5, column=1,sticky="w",padx=5)
 
-
-
-
-
-    # 퀘스트 창 위치 보정 값 
+    # 시작 퀘스트 창 위치 보정 값 
     offsetName=tk.Label(root, text="위치보정:", width=10,padx=5)
     offsetName.grid(row=2, column=0)
 
@@ -817,10 +665,9 @@ if __name__ == '__main__':
     locationSet_button = tk.Button(root, text="보정", command=offset_quest_location)
     locationSet_button.grid(row=2, column=2,sticky="we",padx=5)
 
-    offsetName=tk.Label(root, text=" * 퀘스트창 클릭 위치변경(2번째 기준 10~20) *", width=10,padx=5)
+    offsetName=tk.Label(root, text=" * 위치 보정 설명 : 퀘스트창 클릭 위치변경(2번째 기준 10~20) *", width=10,padx=5)
     offsetName.grid(row=3, column=0,columnspan=3, sticky='we')
     
-
     puase_event.set()
 
     root.mainloop()

@@ -71,15 +71,15 @@ if __name__ == "__main__":
 
     conf = JsonConfigFileManager('./config.json')
 
-    # coords = calcCoordsRatio(conf.values.quest.oldCoords, conf.values.quest.oldWndSize)
-    # conf.update({'quest':{'coords':coords}})
+    coords = calcCoordsRatio(conf.values.quest.oldCoords, conf.values.quest.oldWndSize)
+    conf.update({'quest':{'coords':coords}})
 
     # coords = calcCoordsRatio(conf.values.fishing.oldCoords, conf.values.fishing.oldWndSize)
     # conf.update({'fishing':{'coords':coords}})
 
-    for key, val in conf.values.merchant_quest.oldCoords.items():
-        coords = calcCoordsRatio(val, conf.values.merchant_quest.oldWndSize)
-        conf.update({'merchant_quest':{'coords':{key:coords}}})
+    # for key, val in conf.values.merchant_quest.oldCoords.items():
+    #     coords = calcCoordsRatio(val, conf.values.merchant_quest.oldWndSize)
+    #     conf.update({'merchant_quest':{'coords':{key:coords}}})
 
     print(conf.values)
 
